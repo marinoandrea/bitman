@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/marinoandrea/bitman/compare/v0.1.0...v0.2.0) (2026-11-12)
+
+
+### Features
+
+* add garment mock-ups and in-app updates ([2847057](https://github.com/marinoandrea/bitman/commit/28470575ecd4a399f796830b9a75e3d944701d6b))
+* **compose:** implement interactive composition workspace ([575b18b](https://github.com/marinoandrea/bitman/commit/575b18b8e09d93ee6876bea7ffb599cf4d8236b6))
+
+
+### Bug Fixes
+
+* prevent stale slider drags from changing other controls ([36eb13b](https://github.com/marinoandrea/bitman/commit/36eb13b43d08cde24ea0a50d0c0a0d5c20b41f6b))
+
 ## 0.1.0 (2026-11-12)
 
 
