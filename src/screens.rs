@@ -200,14 +200,53 @@ impl Workspace {
                 "Getting started",
                 column()
                     .child(muted("01   Convert a raster image"))
-                    .child(muted("02   Compose a page"))
-                    .child(muted("03   Prepare print plates"))
-                    .child(muted("04   Preview on a garment")),
+                    .child(muted("02   Prepare print plates"))
+                    .child(muted("03   Export an SVG")),
             ))
             .child(section(
                 "Supported images",
                 column().child(muted("PNG · JPG · GIF · WebP · BMP · TIFF")),
             ))
+            .child(section(
+                "Original project",
+                column()
+                    .child(label("Boot Tool"))
+                    .child(muted("By sshhiiff and contributors"))
+                    .child(muted("Credits and source links in the guide.")),
+            ))
+    }
+
+    fn help_credits(&self) -> Div {
+        help_section(
+            "Credits — original implementation",
+            column()
+                .w_full()
+                .min_w_0()
+                .flex_shrink_0()
+                .text_sm()
+                .text_color(rgb(MUTED))
+                .children([
+                    "Bitman is based on Boot Tool by sshhiiff and its contributors. Credit for the original application, its image-to-vector and screen-printing workflows, workspace design, interface layout, and colour palette belongs to the Boot Tool project.",
+                    "Boot Tool's Convert, Compose, Print, and Simulate workspaces provided the reference for this app. This adaptation references Boot Tool 0.8.8 at revision 5bd1a4303093d01bbab3d1f5b61cbc8f19699e3a.",
+                    "Bitman reimplements the interface in Rust with GPUI and provides its own Rust effects engine. The original Boot Tool uses Python and a browser interface, including Paper.js for Compose. Its Python code and Paper.js are not bundled in Bitman.",
+                ].into_iter().map(help_text))
+                .child(row().w_full().min_w_0().flex_shrink_0().flex_wrap().children([
+                    ("Boot Tool source ↗", "https://github.com/sshhiiff/Boot-Tool"),
+                    ("sshhiiff ↗", "https://github.com/sshhiiff"),
+                    ("Contributors ↗", "https://github.com/sshhiiff/Boot-Tool/graphs/contributors"),
+                    ("Referenced version ↗", "https://github.com/sshhiiff/Boot-Tool/tree/5bd1a4303093d01bbab3d1f5b61cbc8f19699e3a"),
+                ].into_iter().map(|(title, url)| {
+                    button(title)
+                        .flex_shrink_0()
+                        .whitespace_nowrap()
+                        .id(title)
+                        .cursor_pointer()
+                        .on_click(move |_, _, cx| cx.open_url(url))
+                })))
+                .child(help_text("Additional credits: GPUI by Zed Industries; Departure Mono by Helena Zhang; Sometype Mono by Ryoichi Tsunekawa / Dharma Type. Both fonts use the SIL Open Font License 1.1.")),
+        )
+        .w_full()
+        .flex_shrink_0()
     }
 
     pub fn stage(&self, cx: &mut Context<Self>) -> Div {
@@ -251,17 +290,19 @@ impl Workspace {
                         .child(muted("Choose a design from the library to place it on the shirt"))))
                 .child(self.library_shelf(cx)),
             Screen::Help => stage.child(
-                div().id("help-content").size_full().overflow_y_scroll().p(px(40.0))
-                    .child(column().gap(px(24.0)).max_w(px(790.0))
-                        .child(heading("A workspace for images and print").text_2xl())
-                        .child(muted("Convert, compose, separate, and preview — all in one place."))
+                div().id("help-content").flex().flex_col().size_full().min_w_0().min_h_0().overflow_y_scroll().p(px(40.0))
+                    .child(column().w_full().min_w_0().flex_shrink_0().gap(px(24.0)).max_w(px(790.0))
+                        .child(heading("A workspace for images and print").flex().flex_col().w_full().min_w_0().flex_shrink_0().text_2xl())
+                        .child(help_text("Open an image, adjust its appearance, and export vectors or print plates. All processing stays on your Mac.").text_xs())
+                        .child(self.help_credits())
                         .children([
-                            ("Convert", "Prepare raster images for vector tracing. Adjust the look, threshold, colours, and detail. Compare the SVG with the original, or use Batch to organise multiple images."),
-                            ("Compose", "Arrange graphics on an artboard. The toolbar holds selection, node editing, pen, text, shape, and fill tools. Layers and exact transforms live in the left inspector."),
+                            ("Open an image", "Choose File → Open Image… (⌘O), or drop an image into the window. PNG, JPEG, GIF, WebP, BMP, and TIFF are supported."),
+                            ("Convert", "Prepare raster images for vector tracing. Adjust the look, threshold, colours, and detail. Compare the SVG with the original using the Original, Split, or Overlay view."),
                             ("Print", "Choose one ink, CMYK, or spot colours. Set levels, halftone or dither options, page dimensions, and registration marks. Review each plate before export."),
-                            ("Simulate", "Arrange designs on the front or back of a shirt. Use the size, colour, placement, and measurement controls to prepare a mock-up."),
-                            ("Shortcuts", "Select V   ·   Nodes A   ·   Pen P   ·   Text T   ·   Shape S   ·   Fill F"),
-                        ].into_iter().map(|(title, detail)| section(title, div().text_sm().text_color(rgb(MUTED)).child(detail))))),
+                            ("Export", "Choose File → Export SVG… (⇧⌘S) from Convert or Print after processing finishes. Print exports layered SVG plates. Preview resolution is capped at 1024 pixels per side; export is capped at 4096."),
+                            ("Keyboard shortcuts", "⌘O Open image · ⇧⌘S Export SVG · ⌘1 Convert · ⌘2 Print · ⌃⌘F Full screen · ⌘M Minimize · ⇧⌘/ Help · ⌘W Close window · ⌘Q Quit"),
+                            ("Still in development", "Compose, Simulate, Batch, and the library are layout previews. Their editing and queue tools, along with Fit and 100%, are not implemented yet."),
+                        ].into_iter().map(|(title, detail)| help_section(title, help_text(detail))))),
             ),
         }
     }
@@ -330,6 +371,45 @@ impl Workspace {
                     )),
             )
     }
+}
+
+// Flex columns give GPUI text a definite wrapping width. Block text containers can
+// retain a wider intrinsic measurement, overflowing the guide's capped width.
+fn help_text(text: &'static str) -> Div {
+    div()
+        .flex()
+        .flex_col()
+        .w_full()
+        .min_w_0()
+        .flex_shrink_0()
+        .text_sm()
+        .text_color(rgb(MUTED))
+        .child(text)
+}
+
+fn help_section(title: &'static str, content: impl IntoElement) -> Div {
+    column()
+        .w_full()
+        .min_w_0()
+        .flex_shrink_0()
+        .gap(px(14.0))
+        .p(px(16.0))
+        .border_b_1()
+        .border_color(rgb(LINE))
+        .child(
+            heading(title)
+                .flex()
+                .flex_col()
+                .w_full()
+                .min_w_0()
+                .flex_shrink_0()
+                .text_sm()
+                .px(px(12.0))
+                .py(px(6.0))
+                .bg(rgb(ACCENT))
+                .text_color(rgb(WHITE)),
+        )
+        .child(content)
 }
 
 fn artboard() -> Div {

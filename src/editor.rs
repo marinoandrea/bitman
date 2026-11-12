@@ -335,12 +335,16 @@ impl Workspace {
         cx.notify();
     }
 
+    pub fn can_export_svg(&self) -> bool {
+        self.editor.source.is_some()
+            && !self.editor.loading
+            && !self.editor.busy
+            && !self.editor.exporting
+            && matches!(self.screen, Screen::Convert | Screen::Print)
+    }
+
     pub fn save_svg(&mut self, cx: &mut Context<Self>) {
-        if self.editor.source.is_none()
-            || self.editor.busy
-            || self.editor.exporting
-            || !matches!(self.screen, Screen::Convert | Screen::Print)
-        {
+        if !self.can_export_svg() {
             return;
         }
         let path = self.editor.path.clone().unwrap_or_default();

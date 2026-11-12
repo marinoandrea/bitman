@@ -1,6 +1,10 @@
-use gpui::{Context, Div, IntoElement, Render, Styled, Window, div, prelude::*, px, rgb};
+use gpui::{
+    Context, Div, FocusHandle, IntoElement, PromptLevel, Render, Styled, Window, div, prelude::*,
+    px, rgb,
+};
 
 use crate::controls::*;
+use crate::menus::*;
 
 const SIDEBAR_WIDTH: f32 = 300.0;
 
@@ -24,8 +28,8 @@ impl Screen {
     ];
 }
 
-#[derive(Default)]
 pub struct Workspace {
+    pub focus_handle: FocusHandle,
     pub editor: crate::editor::Editor,
     pub screen: Screen,
     pub preview: usize,
@@ -46,6 +50,35 @@ pub struct Workspace {
 }
 
 impl Workspace {
+    pub fn new(cx: &mut Context<Self>) -> Self {
+        Self {
+            focus_handle: cx.focus_handle(),
+            editor: crate::editor::Editor::default(),
+            screen: Screen::default(),
+            preview: 0,
+            background: 0,
+            convert_mode: 0,
+            upscale_style: 0,
+            print_method: 0,
+            print_kind: 0,
+            print_render: 0,
+            plate: 0,
+            print_shape: 0,
+            dither: 0,
+            compose_tool: 0,
+            library: 0,
+            shirt_side: 0,
+            shirt_size: 3,
+            sleeve: 0,
+        }
+    }
+
+    fn show_screen(&mut self, screen: Screen, cx: &mut Context<Self>) {
+        self.screen = screen;
+        self.request_effects(cx);
+        cx.notify();
+    }
+
     pub fn choices(
         &self,
         id: &'static str,
@@ -117,9 +150,7 @@ impl Workspace {
                         .cursor_pointer()
                         .hover(move |style| style.bg(rgb(if active { ACCENT } else { BUTTON })))
                         .on_click(cx.listener(move |this, _, _, cx| {
-                            this.screen = screen;
-                            this.request_effects(cx);
-                            cx.notify();
+                            this.show_screen(screen, cx);
                         }))
                         .child(label)
                 },
@@ -306,6 +337,26 @@ impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.release_retired_images(window);
         div()
+            .key_context("Workspace")
+            .track_focus(&self.focus_handle)
+            .on_action(cx.listener(|this, _: &OpenImage, _, cx| this.open_image(cx)))
+            .when(self.can_export_svg(), |view| {
+                view.on_action(cx.listener(|this, _: &ExportSvg, _, cx| this.save_svg(cx)))
+            })
+            .on_action(cx.listener(|this, _: &ShowConvert, _, cx| this.show_screen(Screen::Convert, cx)))
+            .on_action(cx.listener(|this, _: &ShowPrint, _, cx| this.show_screen(Screen::Print, cx)))
+            .on_action(cx.listener(|this, _: &ShowHelp, _, cx| this.show_screen(Screen::Help, cx)))
+            .on_action(cx.listener(|_, _: &CloseWindow, window, _| window.remove_window()))
+            .on_action(cx.listener(|_, _: &Minimize, window, _| window.minimize_window()))
+            .on_action(cx.listener(|_, _: &Zoom, window, _| window.zoom_window()))
+            .on_action(cx.listener(|_, _: &ToggleFullScreen, window, _| window.toggle_fullscreen()))
+            .on_action(cx.listener(|_, _: &About, window, cx| {
+                let detail = format!(
+                    "Version {}\n\nLocal image conversion and print preparation.\n\nBased on Boot Tool by sshhiiff and contributors. See Help → Bitman Help for full credits and source links.\n\nFonts: Departure Mono and Sometype Mono, licensed under the SIL Open Font License 1.1.",
+                    env!("CARGO_PKG_VERSION")
+                );
+                drop(window.prompt(PromptLevel::Info, "About Bitman", Some(&detail), &["OK"], cx));
+            }))
             .on_drop(cx.listener(|this, paths: &gpui::ExternalPaths, _, cx| {
                 if let Some(path) = paths.paths().first() {
                     this.load_path(path.clone(), cx);
