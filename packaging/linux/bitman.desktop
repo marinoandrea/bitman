@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Bitman
+Comment=Native image processing and print workspace
+Exec=bitman
+Icon=bitman
+Terminal=false
+Categories=Graphics;2DGraphics;

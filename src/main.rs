@@ -10,6 +10,11 @@ use app::Workspace;
 use gpui::{App, AppContext, Application, Bounds, WindowBounds, WindowOptions, px, size};
 
 fn main() {
+    if std::env::args().any(|argument| argument == "--version" || argument == "-V") {
+        println!("bitman {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+
     if std::env::args().any(|argument| argument == "--font-licenses") {
         println!("{}", fonts::LICENSES);
         return;

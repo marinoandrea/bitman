@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Rust-1.99%2B-71F7EE?style=flat&amp;logo=rust&amp;logoColor=white" alt="Rust 1.99 or newer">
   <img src="https://img.shields.io/badge/Cargo-1.99.1-71F7EE?style=flat&amp;logo=rust&amp;logoColor=white" alt="Cargo 1.99.1 (verified toolchain)">
-  <img src="https://img.shields.io/badge/version-0.1.0-71F7EE?style=flat" alt="Package version 0.1.0">
+  <img src="https://img.shields.io/github/v/release/marinoandrea/bitman?color=71F7EE&amp;style=flat" alt="Latest release">
 </p>
 
 A native GPUI image and print workspace rewrite of [Boot Tool](https://github.com/sshhiiff/Boot-Tool).

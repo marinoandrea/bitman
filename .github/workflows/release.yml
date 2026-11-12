@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Do not cancel an in-flight release or its asset uploads on a newer push.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    needs: release-please
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.release-please.outputs.sha || github.sha }}
+
+  release-please:
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      sha: ${{ steps.release.outputs.sha }}
+    steps:
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target-branch: main
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+      # Explicit dispatch runs bot PR checks without a PAT or manual approval.
+      - name: Run CI on release PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          for pr in json.loads(os.environ['RELEASE_PRS'] or '[]'):
+              branch = subprocess.check_output(
+                  ['gh', 'pr', 'view', str(pr['number']), '--json', 'headRefName',
+                   '--jq', '.headRefName'], text=True).strip()
+              subprocess.run(['gh', 'workflow', 'run', 'ci.yml', '--ref', branch], check=True)
+          PY
+
+  publish:
+    needs: [ci, release-please]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+      RELEASE_SHA: ${{ needs.release-please.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: packages-*
+          path: dist
+          merge-multiple: true
+      - name: Verify release provenance and complete asset set
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          targets = {'aarch64-apple-darwin', 'x86_64-apple-darwin',
+                     'x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc'}
+          manifests = [json.loads(p.read_text()) for p in Path('dist').glob('*.json')]
+          assert len(manifests) == len(targets)
+          assert {m['target'] for m in manifests} == targets
+          for manifest in manifests:
+              assert manifest['commit'] == os.environ['RELEASE_SHA']
+              assert 'v' + manifest['version'] == os.environ['RELEASE_TAG']
+              for name in manifest['artifacts']:
+                  path = Path('dist') / name
+                  with path.open('rb') as source:
+                      digest = hashlib.file_digest(source, 'sha256').hexdigest()
+                  assert path.with_name(name + '.sha256').read_text() == f'{digest}  {name}\n'
+          PY
+      - name: Upload tested packages to the release-please release
+        run: gh release upload "$RELEASE_TAG" dist/* --clobber
