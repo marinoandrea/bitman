@@ -5,12 +5,15 @@ actions!(
     bitman,
     [
         About,
+        CheckForUpdates,
         Quit,
         Hide,
         HideOthers,
         ShowAll,
         OpenImage,
         ExportSvg,
+        ExportMockup,
+        RemoveArtwork,
         CloseWindow,
         Cut,
         Copy,
@@ -18,6 +21,7 @@ actions!(
         SelectAll,
         ShowConvert,
         ShowPrint,
+        ShowSimulate,
         ToggleFullScreen,
         Minimize,
         Zoom,
@@ -27,7 +31,11 @@ actions!(
 );
 
 pub fn init(cx: &mut App) {
-    cx.on_action(|_: &Quit, cx| cx.quit());
+    cx.on_action(|_: &Quit, cx| {
+        if !crate::updater::install_in_progress() {
+            cx.quit();
+        }
+    });
     cx.on_action(|_: &Hide, cx| cx.hide());
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());
     cx.on_action(|_: &ShowAll, cx| cx.unhide_other_apps());
@@ -52,6 +60,10 @@ pub fn init(cx: &mut App) {
         KeyBinding::new("cmd-a", SelectAll, None),
         KeyBinding::new("cmd-1", ShowConvert, None),
         KeyBinding::new("cmd-2", ShowPrint, None),
+        KeyBinding::new("cmd-3", ShowSimulate, None),
+        KeyBinding::new("cmd-alt-s", ExportMockup, None),
+        KeyBinding::new("backspace", RemoveArtwork, Some("Workspace")),
+        KeyBinding::new("delete", RemoveArtwork, Some("Workspace")),
         KeyBinding::new("ctrl-cmd-f", ToggleFullScreen, None),
         KeyBinding::new("cmd-m", Minimize, None),
         // GPUI represents shifted punctuation by the resulting character.
@@ -62,6 +74,7 @@ pub fn init(cx: &mut App) {
             name: "Bitman".into(),
             items: vec![
                 MenuItem::action("About Bitman", About),
+                MenuItem::action("Check for Updates…", CheckForUpdates),
                 MenuItem::separator(),
                 MenuItem::os_submenu("Services", SystemMenuType::Services),
                 MenuItem::separator(),
@@ -77,6 +90,7 @@ pub fn init(cx: &mut App) {
             items: vec![
                 MenuItem::action("Open Image…", OpenImage),
                 MenuItem::action("Export SVG…", ExportSvg),
+                MenuItem::action("Save Mock-up JPG…", ExportMockup),
                 MenuItem::separator(),
                 MenuItem::action("Close Window", CloseWindow),
             ],
@@ -91,6 +105,8 @@ pub fn init(cx: &mut App) {
                 MenuItem::os_action("Paste", Paste, OsAction::Paste),
                 MenuItem::separator(),
                 MenuItem::os_action("Select All", SelectAll, OsAction::SelectAll),
+                MenuItem::separator(),
+                MenuItem::action("Remove Artwork", RemoveArtwork),
             ],
         },
         Menu {
@@ -98,6 +114,7 @@ pub fn init(cx: &mut App) {
             items: vec![
                 MenuItem::action("Convert", ShowConvert),
                 MenuItem::action("Print", ShowPrint),
+                MenuItem::action("Simulate", ShowSimulate),
                 MenuItem::separator(),
                 MenuItem::action("Toggle Full Screen", ToggleFullScreen),
             ],

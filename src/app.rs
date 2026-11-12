@@ -29,6 +29,7 @@ impl Screen {
 }
 
 pub struct Workspace {
+    pub update_state: crate::updater::UpdateState,
     pub focus_handle: FocusHandle,
     pub editor: crate::editor::Editor,
     pub screen: Screen,
@@ -44,14 +45,13 @@ pub struct Workspace {
     pub dither: usize,
     pub compose_tool: usize,
     pub library: usize,
-    pub shirt_side: usize,
-    pub shirt_size: usize,
-    pub sleeve: usize,
+    pub simulation: crate::simulate_ui::SimulationUi,
 }
 
 impl Workspace {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        Self {
+        let mut workspace = Self {
+            update_state: crate::updater::UpdateState::default(),
             focus_handle: cx.focus_handle(),
             editor: crate::editor::Editor::default(),
             screen: Screen::default(),
@@ -67,14 +67,18 @@ impl Workspace {
             dither: 0,
             compose_tool: 0,
             library: 0,
-            shirt_side: 0,
-            shirt_size: 3,
-            sleeve: 0,
-        }
+            simulation: crate::simulate_ui::SimulationUi::default(),
+        };
+        workspace.start_update_checks(cx);
+        workspace
     }
 
     fn show_screen(&mut self, screen: Screen, cx: &mut Context<Self>) {
+        self.end_simulation_drag();
         self.screen = screen;
+        if screen == Screen::Simulate {
+            self.render_simulation(cx);
+        }
         self.request_effects(cx);
         cx.notify();
     }
@@ -131,7 +135,12 @@ impl Workspace {
                     .w(px(SIDEBAR_WIDTH))
                     .flex_shrink_0()
                     .child(heading("BITMAN").text_lg())
-                    .child(div().text_xs().text_color(rgb(BUTTON)).child("0.1")),
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(rgb(BUTTON))
+                            .child(env!("CARGO_PKG_VERSION")),
+                    ),
             )
             .child(row().h_full().gap_0().children(Screen::ALL.into_iter().map(
                 |(screen, label)| {
@@ -174,7 +183,22 @@ impl Workspace {
                         })
                         .id("save-svg")
                         .cursor_pointer()
-                        .on_click(cx.listener(|this, _, _, cx| this.save_svg(cx))),
+                        .when(
+                            self.screen != Screen::Simulate || self.can_export_mockup(),
+                            |b| {
+                                b.on_click(cx.listener(|this, _, _, cx| {
+                                    if this.screen == Screen::Simulate {
+                                        this.save_mockup(cx);
+                                    } else {
+                                        this.save_svg(cx);
+                                    }
+                                }))
+                            },
+                        )
+                        .when(
+                            self.screen == Screen::Simulate && !self.can_export_mockup(),
+                            |b| b.opacity(0.45),
+                        ),
                     ),
             )
     }
@@ -255,8 +279,26 @@ impl Workspace {
                     |this, index| this.background = index,
                 ))
             })
-            .child(button("Fit"))
-            .child(button("100%"))
+            .child(
+                button("Fit")
+                    .id("fit-view")
+                    .when(self.screen == Screen::Simulate, |b| {
+                        b.cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                            this.simulation.actual_size = false;
+                            cx.notify();
+                        }))
+                    }),
+            )
+            .child(
+                button("100%")
+                    .id("actual-view")
+                    .when(self.screen == Screen::Simulate, |b| {
+                        b.cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                            this.simulation.actual_size = true;
+                            cx.notify();
+                        }))
+                    }),
+            )
     }
 
     fn sidebar(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -265,7 +307,7 @@ impl Workspace {
             Screen::Compose => self.compose_sidebar(cx),
             Screen::Print => self.print_sidebar(cx),
             Screen::Simulate => self.simulate_sidebar(cx),
-            Screen::Help => self.help_sidebar(),
+            Screen::Help => self.help_sidebar(cx),
         };
         div()
             .id("inspector")
@@ -276,10 +318,50 @@ impl Workspace {
             .border_r_1()
             .border_color(rgb(LINE))
             .bg(rgb(PANEL))
+            .when(
+                matches!(self.screen, Screen::Convert | Screen::Print),
+                |side| {
+                    side.child(section(
+                        "Mock-up",
+                        button("Add to Simulate")
+                            .id("send-to-simulate")
+                            .when(self.can_export_svg(), |b| {
+                                b.cursor_pointer().on_click(
+                                    cx.listener(|this, _, _, cx| this.send_to_simulate(cx)),
+                                )
+                            })
+                            .when(!self.can_export_svg(), |b| b.opacity(0.45)),
+                    ))
+                },
+            )
             .child(content)
     }
 
     fn footer(&self) -> Div {
+        if self.screen == Screen::Simulate {
+            return column()
+                .flex_shrink_0()
+                .px(px(20.0))
+                .py(px(10.0))
+                .bg(rgb(PANEL))
+                .border_t_1()
+                .border_color(rgb(LINE))
+                .child(muted(format!(
+                    "{} design(s) on {} · centimetres · {}",
+                    self.simulation.scene.current().len(),
+                    if self.simulation.scene.back {
+                        "back"
+                    } else {
+                        "front"
+                    },
+                    if self.simulation.actual_size {
+                        "100% (preview pixels)"
+                    } else {
+                        "Fit"
+                    }
+                )))
+                .child(muted(self.simulation.status.clone()));
+        }
         if matches!(self.screen, Screen::Convert | Screen::Print) {
             let info = self.editor.info;
             return row()
@@ -340,13 +422,25 @@ impl Render for Workspace {
             .key_context("Workspace")
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(|this, _: &OpenImage, _, cx| this.open_image(cx)))
+            .on_action(cx.listener(|this, _: &CheckForUpdates, _, cx| {
+                this.screen = Screen::Help;
+                this.check_for_updates(cx);
+                cx.notify();
+            }))
             .when(self.can_export_svg(), |view| {
                 view.on_action(cx.listener(|this, _: &ExportSvg, _, cx| this.save_svg(cx)))
             })
             .on_action(cx.listener(|this, _: &ShowConvert, _, cx| this.show_screen(Screen::Convert, cx)))
             .on_action(cx.listener(|this, _: &ShowPrint, _, cx| this.show_screen(Screen::Print, cx)))
+            .on_action(cx.listener(|this, _: &ShowSimulate, _, cx| this.show_screen(Screen::Simulate, cx)))
+            .when(self.screen == Screen::Simulate && self.can_export_mockup(), |view| view.on_action(cx.listener(|this, _: &ExportMockup, _, cx| this.save_mockup(cx))))
+            .when(self.screen == Screen::Simulate && self.simulation.scene.selection().is_some(), |view| view.on_action(cx.listener(|this, _: &RemoveArtwork, _, cx| this.remove_simulation_design(cx))))
             .on_action(cx.listener(|this, _: &ShowHelp, _, cx| this.show_screen(Screen::Help, cx)))
-            .on_action(cx.listener(|_, _: &CloseWindow, window, _| window.remove_window()))
+            .on_action(cx.listener(|_, _: &CloseWindow, window, _| {
+                if !crate::updater::install_in_progress() {
+                    window.remove_window();
+                }
+            }))
             .on_action(cx.listener(|_, _: &Minimize, window, _| window.minimize_window()))
             .on_action(cx.listener(|_, _: &Zoom, window, _| window.zoom_window()))
             .on_action(cx.listener(|_, _: &ToggleFullScreen, window, _| window.toggle_fullscreen()))
@@ -358,17 +452,21 @@ impl Render for Workspace {
                 drop(window.prompt(PromptLevel::Info, "About Bitman", Some(&detail), &["OK"], cx));
             }))
             .on_drop(cx.listener(|this, paths: &gpui::ExternalPaths, _, cx| {
-                if let Some(path) = paths.paths().first() {
+                if this.screen == Screen::Simulate {
+                    for path in paths.paths() { this.load_simulation_path(path.clone(), cx); }
+                } else if let Some(path) = paths.paths().first() {
                     this.load_path(path.clone(), cx);
                 }
             }))
             .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| {
-                this.move_effect_slider(event, cx)
+                this.move_effect_slider(event, cx);
+                this.move_simulation_pointer(event, cx);
             }))
             .on_mouse_up(
                 gpui::MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
                     this.editor.active_slider = None;
+                    this.end_simulation_drag();
                     cx.notify();
                 }),
             )
@@ -381,6 +479,7 @@ impl Render for Workspace {
             .text_sm()
             .bg(rgb(WASH))
             .child(self.header(cx))
+            .when(matches!(self.update_state, crate::updater::UpdateState::Available(_) | crate::updater::UpdateState::Installing | crate::updater::UpdateState::Installed | crate::updater::UpdateState::InstallFailed(_)), |view| view.child(self.update_banner(cx)))
             .child(
                 div()
                     .flex()
@@ -394,7 +493,7 @@ impl Render for Workspace {
                             .flex_1()
                             .min_w_0()
                             .child(self.toolbar(cx))
-                            .child(self.stage(cx))
+                            .child(self.stage(window.viewport_size().width - px(SIDEBAR_WIDTH), cx))
                             .when(
                                 self.screen == Screen::Print
                                     && self.print_render == 0

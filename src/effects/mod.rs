@@ -1144,6 +1144,17 @@ impl Engine {
         });
     }
 
+    /// Coloured print artwork without the paper/garment backdrop or registration marks.
+    pub fn composite_artwork(&mut self, p: Params) {
+        self.composite(None, p);
+        let n = self.info.width * self.info.height;
+        for (i, pixel) in self.pixels.iter_mut().enumerate() {
+            if !(0..self.info.plates).any(|k| self.masks[k * n + i] != 0) {
+                *pixel = [0; 4];
+            }
+        }
+    }
+
     pub fn encode_bmp(&mut self) {
         let (w, h) = (self.info.width, self.info.height);
         let len = 122 + w * h * 4;

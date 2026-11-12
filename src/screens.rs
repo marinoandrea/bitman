@@ -1,4 +1,4 @@
-use gpui::{Context, Div, PathBuilder, Styled, canvas, div, point, prelude::*, px, rgb};
+use gpui::{Context, Div, Pixels, Styled, canvas, div, point, prelude::*, px, rgb};
 
 use crate::{
     app::{Screen, Workspace},
@@ -125,77 +125,10 @@ impl Workspace {
             ))
     }
 
-    pub fn simulate_sidebar(&self, cx: &mut Context<Self>) -> Div {
+    pub fn help_sidebar(&self, cx: &mut Context<Self>) -> Div {
         column()
             .gap_0()
-            .child(section(
-                "Shirt",
-                column()
-                    .child(label("Shirt size"))
-                    .child(self.choices(
-                        "shirt-size",
-                        &["XS", "S", "M", "L", "XL", "XXL"],
-                        self.shirt_size,
-                        cx,
-                        |s, i| s.shirt_size = i,
-                    ))
-                    .child(label("Sleeve length"))
-                    .child(self.choices(
-                        "sleeve",
-                        &["Short sleeve", "Long sleeve"],
-                        self.sleeve,
-                        cx,
-                        |s, i| s.sleeve = i,
-                    ))
-                    .child(label("View"))
-                    .child(self.choices(
-                        "shirt-side",
-                        &["Front", "Back"],
-                        self.shirt_side,
-                        cx,
-                        |s, i| s.shirt_side = i,
-                    )),
-            ))
-            .child(section(
-                "Shirt colour",
-                column().child(swatches()).child(button("Use Print colour")),
-            ))
-            .child(section(
-                "Designs",
-                column()
-                    .child(muted("No designs on this side"))
-                    .child(muted("Choose a graphic from the library below.")),
-            ))
-            .child(section(
-                "Placement",
-                column()
-                    .child(field("Width", "— cm"))
-                    .child(field("Height", "— cm"))
-                    .child(field("From collar", "— cm"))
-                    .child(field("From centre", "— cm"))
-                    .child(field("Rotation", "0°"))
-                    .child(check("Keep proportions", true))
-                    .child(
-                        row()
-                            .child(button("Centre"))
-                            .child(button("Chest"))
-                            .child(button("Full front")),
-                    )
-                    .child(row().child(button("Duplicate")).child(button("Remove"))),
-            ))
-            .child(section(
-                "View & export",
-                column()
-                    .child(check("Show shirt measurements", true))
-                    .child(check("Crop designs to the shirt", true))
-                    .child(check("Include measurements in JPG", false))
-                    .child(primary_button("Save mock-up as JPG")),
-            ))
-    }
-
-    pub fn help_sidebar(&self) -> Div {
-        column()
-            .gap_0()
+            .child(section("Updates", self.update_controls(cx)))
             .child(section(
                 "Getting started",
                 column()
@@ -249,7 +182,8 @@ impl Workspace {
         .flex_shrink_0()
     }
 
-    pub fn stage(&self, cx: &mut Context<Self>) -> Div {
+    pub fn stage(&self, available_width: Pixels, cx: &mut Context<Self>) -> Div {
+        let help_width = (available_width - px(80.0)).clamp(px(0.0), px(790.0));
         let stage = div().flex().flex_col().flex_1().min_h_0().overflow_hidden();
         if matches!(self.screen, Screen::Convert | Screen::Print)
             && self.editor.source.is_some()
@@ -282,27 +216,24 @@ impl Workspace {
                         .flex().items_center().justify_center()
                         .child(empty_message("Your print starts here", "Open an image to preview the separated plates")))
                     .child(muted("A4 · 297 × 210 mm · Landscape"))),
-            Screen::Simulate => stage
-                .child(div().flex().flex_1().min_h_0().p(px(24.0)).items_center().justify_center()
-                    .child(column().items_center().gap(px(10.0)).size_full().max_w(px(490.0))
-                        .child(muted(if self.shirt_side == 0 { "FRONT" } else { "BACK" }))
-                        .child(shirt(self.sleeve == 1))
-                        .child(muted("Choose a design from the library to place it on the shirt"))))
-                .child(self.library_shelf(cx)),
+            Screen::Simulate => self.simulation_stage(cx),
+            // Direct children let GPUI measure the scroll range through the final section.
+            // Resolve the width before text measurement: max-width can wrap text after
+            // section heights are measured, leaving borders across the last line.
             Screen::Help => stage.child(
-                div().id("help-content").flex().flex_col().size_full().min_w_0().min_h_0().overflow_y_scroll().p(px(40.0))
-                    .child(column().w_full().min_w_0().flex_shrink_0().gap(px(24.0)).max_w(px(790.0))
-                        .child(heading("A workspace for images and print").flex().flex_col().w_full().min_w_0().flex_shrink_0().text_2xl())
-                        .child(help_text("Open an image, adjust its appearance, and export vectors or print plates. All processing stays on your Mac.").text_xs())
-                        .child(self.help_credits())
-                        .children([
-                            ("Open an image", "Choose File → Open Image… (⌘O), or drop an image into the window. PNG, JPEG, GIF, WebP, BMP, and TIFF are supported."),
-                            ("Convert", "Prepare raster images for vector tracing. Adjust the look, threshold, colours, and detail. Compare the SVG with the original using the Original, Split, or Overlay view."),
-                            ("Print", "Choose one ink, CMYK, or spot colours. Set levels, halftone or dither options, page dimensions, and registration marks. Review each plate before export."),
-                            ("Export", "Choose File → Export SVG… (⇧⌘S) from Convert or Print after processing finishes. Print exports layered SVG plates. Preview resolution is capped at 1024 pixels per side; export is capped at 4096."),
-                            ("Keyboard shortcuts", "⌘O Open image · ⇧⌘S Export SVG · ⌘1 Convert · ⌘2 Print · ⌃⌘F Full screen · ⌘M Minimize · ⇧⌘/ Help · ⌘W Close window · ⌘Q Quit"),
-                            ("Still in development", "Compose, Simulate, Batch, and the library are layout previews. Their editing and queue tools, along with Fit and 100%, are not implemented yet."),
-                        ].into_iter().map(|(title, detail)| help_section(title, help_text(detail))))),
+                div().id("help-content").flex().flex_col().flex_1().w_full().min_w_0().min_h_0().overflow_y_scroll().p(px(40.0)).gap(px(24.0))
+                    .child(heading("A workspace for images and print").flex().flex_col().w_full().min_w_0().flex_shrink_0().text_2xl().w(help_width))
+                    .child(help_text("Open an image, adjust its appearance, and export vectors or print plates. All processing stays on your Mac.").text_xs().w(help_width))
+                    .child(self.help_credits().w(help_width))
+                    .children([
+                        ("Open an image", "Choose File → Open Image… (⌘O), or drop an image into the window. PNG, JPEG, GIF, WebP, BMP, and TIFF are supported."),
+                        ("Convert", "Prepare raster images for vector tracing. Adjust the look, threshold, colours, and detail. Compare the SVG with the original using the Original, Split, or Overlay view."),
+                        ("Print", "Choose one ink, CMYK, or spot colours. Set levels, halftone or dither options, page dimensions, and registration marks. Review each plate before export."),
+                        ("Export", "Choose File → Export SVG… (⇧⌘S) from Convert or Print after processing finishes. Print exports layered SVG plates. Preview resolution is capped at 1024 pixels per side; export is capped at 4096."),
+                        ("Keyboard shortcuts", "⌘O Open image · ⇧⌘S Export SVG · ⌘1 Convert · ⌘2 Print · ⌘3 Simulate · ⌥⌘S Save mock-up · Delete/Backspace Remove selected artwork · ⌃⌘F Full screen · ⌘M Minimize · ⇧⌘/ Help · ⌘W Close window · ⌘Q Quit"),
+                        ("Simulate", "Add raster artwork from a file or use Add to Simulate in Convert / Print. Click a library thumbnail to place another copy. Drag designs or use placement sliders and step buttons; the lower blue handle resizes and the upper handle rotates. Front and back keep separate designs. Select a design and press Delete or Backspace, choose Edit → Remove Artwork, or use its Remove button; the library copy stays available. Fit and 100% control the preview. JPG export saves the current side without selection handles. Garment dimensions are illustrative, not manufacturer specifications."),
+                        ("Still in development", "Compose, Batch, and the Compose library are layout previews. Their editing and queue tools, along with Fit and 100% outside Simulate, are not implemented yet."),
+                    ].into_iter().map(|(title, detail)| help_section(title, help_text(detail)).w(help_width))),
             ),
         }
     }
@@ -427,80 +358,6 @@ fn artboard() -> Div {
                 let page = gpui::Bounds::new(origin, gpui::size(width, height));
                 window.paint_quad(gpui::fill(page, rgb(WHITE)));
                 window.paint_quad(gpui::outline(page, rgb(LINE), Default::default()));
-            },
-        )
-        .size_full(),
-    )
-}
-
-/// Decorative shirt silhouette; no garment simulation or image processing is performed.
-fn shirt(long_sleeve: bool) -> Div {
-    div().w_full().flex_1().min_h_0().child(
-        canvas(
-            |_, _, _| (),
-            move |bounds, (), window, _| {
-                let edge = bounds.size.width.min(bounds.size.height);
-                let origin = bounds.origin
-                    + point(
-                        (bounds.size.width - edge) / 2.0,
-                        (bounds.size.height - edge) / 2.0,
-                    );
-                let p = |x: f32, y: f32| origin + point(edge * x, edge * y);
-                let outline: &[(f32, f32)] = if long_sleeve {
-                    &[
-                        (0.38, 0.08),
-                        (0.22, 0.15),
-                        (0.04, 0.72),
-                        (0.16, 0.77),
-                        (0.29, 0.39),
-                        (0.29, 0.91),
-                        (0.71, 0.91),
-                        (0.71, 0.39),
-                        (0.84, 0.77),
-                        (0.96, 0.72),
-                        (0.78, 0.15),
-                        (0.62, 0.08),
-                    ]
-                } else {
-                    &[
-                        (0.38, 0.08),
-                        (0.22, 0.15),
-                        (0.04, 0.31),
-                        (0.17, 0.47),
-                        (0.29, 0.37),
-                        (0.29, 0.91),
-                        (0.71, 0.91),
-                        (0.71, 0.37),
-                        (0.83, 0.47),
-                        (0.96, 0.31),
-                        (0.78, 0.15),
-                        (0.62, 0.08),
-                    ]
-                };
-                for fill in [true, false] {
-                    let mut path = if fill {
-                        PathBuilder::fill()
-                    } else {
-                        PathBuilder::stroke(px(1.5))
-                    };
-                    path.move_to(p(outline[0].0, outline[0].1));
-                    for &(x, y) in &outline[1..] {
-                        path.line_to(p(x, y));
-                    }
-                    path.curve_to(p(0.38, 0.08), p(0.5, 0.27));
-                    path.close();
-                    if let Ok(path) = path.build() {
-                        window.paint_path(path, rgb(if fill { WHITE } else { MUTED }));
-                    }
-                }
-                let mut seams = PathBuilder::stroke(px(1.0));
-                seams.move_to(p(0.31, 0.87));
-                seams.line_to(p(0.69, 0.87));
-                seams.move_to(p(0.36, 0.095));
-                seams.curve_to(p(0.64, 0.095), p(0.5, 0.29));
-                if let Ok(path) = seams.build() {
-                    window.paint_path(path, rgb(PANEL));
-                }
             },
         )
         .size_full(),

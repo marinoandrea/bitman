@@ -62,6 +62,10 @@ impl Default for Editor {
 
 impl Workspace {
     pub fn open_image(&mut self, cx: &mut Context<Self>) {
+        if self.screen == Screen::Simulate {
+            self.open_simulation_file(cx);
+            return;
+        }
         let prompt = cx.prompt_for_paths(PathPromptOptions {
             files: true,
             directories: false,
@@ -150,6 +154,11 @@ impl Workspace {
     }
 
     pub fn choice_changed(&mut self, id: &'static str, cx: &mut Context<Self>) {
+        if matches!(id, "shirt-size" | "sleeve" | "shirt-side") {
+            self.end_simulation_drag();
+            self.simulation_changed(cx);
+            return;
+        }
         let p = &mut self.editor.params;
         match id {
             "convert-mode" => p.mode = [Mode::Auto, Mode::Lineart, Mode::Color][self.convert_mode],

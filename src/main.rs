@@ -5,6 +5,9 @@ mod effect_ui;
 mod fonts;
 mod menus;
 mod screens;
+mod simulate_ui;
+mod update_ui;
+mod updater;
 
 use app::Workspace;
 use gpui::{App, AppContext, Application, Bounds, WindowBounds, WindowOptions, px, size};
@@ -41,6 +44,7 @@ fn main() {
             },
             |window, cx| {
                 window.set_window_title("Bitman");
+                window.on_window_should_close(cx, |_, _| !updater::install_in_progress());
                 cx.new(|cx| {
                     let mut workspace = Workspace::new(cx);
                     window.focus(&workspace.focus_handle);
