@@ -24,7 +24,7 @@ This GPUI rewrite makes it into a fully standolone binary executable with target
 
 ## How to use
 
-Just pick your platform and download the application from the [release page].
+Just pick your platform and download the application from the [latest release page](https://github.com/marinoandrea/bitman/releases/latest).
 
 ## Licensing
 
