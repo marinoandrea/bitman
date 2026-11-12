@@ -213,7 +213,10 @@ pub fn tone_in_place(values: &mut [f32], contrast: f32, brightness: f32, invert:
 
 pub fn grayscale(image: ImageView<'_>, out: &mut [f32], offset: usize) {
     assert!(offset <= image.len() && out.len() <= image.len() - offset);
+    #[cfg(target_arch = "aarch64")]
     let mut done = 0;
+    #[cfg(not(target_arch = "aarch64"))]
+    let done = 0;
     #[cfg(target_arch = "aarch64")]
     if image.stride == image.width * 4 {
         // SAFETY: the view validates the backing length; complete groups contain 8 BGRA pixels.

@@ -26,6 +26,7 @@ and `scripts/`. Preserve Boot Tool attribution and bundled font licenses.
   Cargo and Actions weekly; review dependency bumps and keep `Cargo.lock` current.
 - CI and releases share Rust dependency caches per OS/target, toolchain, build
   environment, and manifests. Only successful main builds save; PRs restore.
+  CI omits debug symbols from development/test builds to keep caches small.
 
 ## Release operations
 
