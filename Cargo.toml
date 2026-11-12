@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
 publish = false
-description = "Native GPUI layout prototype for an image and print workspace"
+description = "Native GPUI image processing and print workspace"
 
 [dependencies]
 # macOS uses GPUI's native Metal backend; optional Linux backends are not needed.
 gpui = { version = "0.2.2", default-features = false, features = ["font-kit", "runtime_shaders"] }
+
+# Keep numerical kernels fast during interactive development without rebuilding GPUI.
+[profile.dev.package.bitman]
+opt-level = 2

@@ -1,6 +1,4 @@
-use gpui::{
-    Context, Div, FontWeight, PathBuilder, Styled, canvas, div, point, prelude::*, px, rgb,
-};
+use gpui::{Context, Div, PathBuilder, Styled, canvas, div, point, prelude::*, px, rgb};
 
 use crate::{
     app::{Screen, Workspace},
@@ -8,104 +6,6 @@ use crate::{
 };
 
 impl Workspace {
-    pub fn convert_sidebar(&self, cx: &mut Context<Self>) -> Div {
-        column()
-            .gap_0()
-            .when(self.preview == 4, |side| {
-                side.child(section(
-                    "Batch convert",
-                    column()
-                        .child(
-                            row()
-                                .child(button("Add images…"))
-                                .child(button("Add folder…")),
-                        )
-                        .child(labeled_input(
-                            "Output folder",
-                            "Choose a folder on this computer",
-                        ))
-                        .child(label("Settings"))
-                        .child(
-                            row()
-                                .child(button("Same for all"))
-                                .child(button("Per image")),
-                        )
-                        .child(check("Keep going if an image fails", true))
-                        .child(primary_button("Convert and save to folder")),
-                ))
-            })
-            .child(section(
-                "Look",
-                column()
-                    .child(muted("Choose how clean or textured your vector looks."))
-                    .child(slider("Clean ← → Crunchy", "50", 0.5))
-                    .child(
-                        row()
-                            .child(button("Clean"))
-                            .child(button("Balanced"))
-                            .child(button("Crunchy")),
-                    ),
-            ))
-            .child(section(
-                "Image size",
-                column()
-                    .child(slider("Upscale", "1×", 0.14))
-                    .child(label("Upscale style"))
-                    .child(self.choices(
-                        "upscale-style",
-                        &["Smooth", "Pixel"],
-                        self.upscale_style,
-                        cx,
-                        |s, i| s.upscale_style = i,
-                    ))
-                    .child(muted("Smaller for texture. Larger for finer edges.")),
-            ))
-            .child(section(
-                "Black & white cut",
-                column()
-                    .child(slider("Threshold", "Auto", 0.0))
-                    .child(label("Threshold method"))
-                    .child(row().child(button("Automatic")).child(button("Adaptive"))),
-            ))
-            .child(section(
-                "Detail",
-                column()
-                    .child(slider("Speckle removal", "6 px", 0.075))
-                    .child(slider("Edge smoothing", "0.60", 0.3))
-                    .child(slider("Simplify", "0.75", 0.18))
-                    .child(slider("Corner sharpness", "125°", 0.6)),
-            ))
-            .child(section(
-                "Colour",
-                column()
-                    .child(label("Mode"))
-                    .child(self.choices(
-                        "convert-mode",
-                        &["Auto", "Line art", "Colour"],
-                        self.convert_mode,
-                        cx,
-                        |s, i| s.convert_mode = i,
-                    ))
-                    .when(self.convert_mode != 1, |body| {
-                        body.child(slider("Colours", "8", 0.43))
-                    })
-                    .child(field("Ink colour", "■  #000000"))
-                    .child(check("Sample from scan", false)),
-            ))
-            .child(section(
-                "Cleanup",
-                column()
-                    .child(check("Denoise before tracing", true))
-                    .child(check("Flatten uneven paper tone", true)),
-            ))
-            .child(section(
-                "Command line",
-                column()
-                    .child(input("boottool run ./images ./out"))
-                    .child(button("Copy command")),
-            ))
-    }
-
     pub fn compose_sidebar(&self, _cx: &mut Context<Self>) -> Div {
         column()
             .gap_0()
@@ -225,221 +125,6 @@ impl Workspace {
             ))
     }
 
-    pub fn print_sidebar(&self, cx: &mut Context<Self>) -> Div {
-        let flat = self.print_method == 2 && self.print_kind == 0;
-        let screen = self.print_render == 0;
-        column()
-            .gap_0()
-            .child(section(
-                "Method",
-                column()
-                    .child(label("Colour separation"))
-                    .child(self.choices(
-                        "print-method",
-                        &["One ink", "CMYK", "Spot colour"],
-                        self.print_method,
-                        cx,
-                        |s, i| s.print_method = i,
-                    ))
-                    .when(self.print_method == 2, |body| {
-                        body.child(label("Image type")).child(self.choices(
-                            "print-kind",
-                            &["Flat graphic", "Photo"],
-                            self.print_kind,
-                            cx,
-                            |s, i| s.print_kind = i,
-                        ))
-                    }),
-            ))
-            .child(section(
-                "Levels",
-                column()
-                    .child(
-                        div()
-                            .h(px(74.0))
-                            .rounded(px(4.0))
-                            .bg(rgb(WASH))
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .child(muted("No image histogram")),
-                    )
-                    .child(
-                        row()
-                            .justify_between()
-                            .child(labeled_input("Black point", "0"))
-                            .child(labeled_input("Midtones", "1.00"))
-                            .child(labeled_input("White point", "255")),
-                    )
-                    .child(row().child(button("Auto")).child(button("Reset"))),
-            ))
-            .when(!flat, |side| {
-                side.child(section(
-                    "Render",
-                    column()
-                        .child(label("Rendering method"))
-                        .child(self.choices(
-                            "print-render",
-                            &["Screen halftone", "Dither"],
-                            self.print_render,
-                            cx,
-                            |s, i| s.print_render = i,
-                        ))
-                        .when(screen, |body| {
-                            body.child(slider("Frequency", "30 LPI", 0.26))
-                                .when(self.print_method == 0, |body| {
-                                    body.child(slider("Angle", "22.5°", 0.25))
-                                })
-                                .child(muted("Shape"))
-                                .child(self.choices(
-                                    "print-shape",
-                                    &[
-                                        "Round", "Diamond", "Ellipse", "Line", "Square", "Cross",
-                                        "Custom",
-                                    ],
-                                    self.print_shape,
-                                    cx,
-                                    |s, i| s.print_shape = i,
-                                ))
-                                .child(slider("Output resolution", "300 px/in", 0.33))
-                        })
-                        .when(!screen, |body| {
-                            body.child(self.choices(
-                                "dither",
-                                &[
-                                    "Floyd–Steinberg",
-                                    "Atkinson",
-                                    "Stucki",
-                                    "Bayer",
-                                    "Blue noise",
-                                    "Serpentine",
-                                    "Random",
-                                ],
-                                self.dither,
-                                cx,
-                                |s, i| s.dither = i,
-                            ))
-                            .child(slider("Dither size", "0.30 mm", 0.1))
-                            .when(self.dither == 5, |body| {
-                                body.child(field("Pattern", "Mazes  ▾")).child(slider(
-                                    "Pattern size",
-                                    "9 grains",
-                                    0.16,
-                                ))
-                            })
-                        }),
-                ))
-                .when(screen && self.print_shape == 6, |side| {
-                    side.child(section(
-                        "Pattern creator",
-                        column()
-                            .child(pattern_grid())
-                            .child(
-                                row()
-                                    .child(button("Draw"))
-                                    .child(button("Erase"))
-                                    .child(button("Clear")),
-                            )
-                            .child(button("Import SVG / PNG…")),
-                    ))
-                })
-                .child(section(
-                    "Tone",
-                    column()
-                        .child(slider("Contrast", "1.00", 0.26))
-                        .child(slider("Brightness", "0.00", 0.5))
-                        .child(slider("Soften before screening", "0.0", 0.0))
-                        .when(self.print_method == 1, |body| {
-                            body.child(slider("Black amount", "60%", 0.6))
-                        })
-                        .child(check("Invert", false)),
-                ))
-            })
-            .child(section(
-                if self.print_method == 1 {
-                    "CMYK plates"
-                } else {
-                    "Ink colours"
-                },
-                column()
-                    .when(self.print_method == 0, |body| {
-                        body.child(field("Ink", "■  #000000"))
-                    })
-                    .when(self.print_method == 1, |body| {
-                        body.child(field("Cyan", "■  15°"))
-                            .child(field("Magenta", "■  75°"))
-                            .child(field("Yellow", "■  0°"))
-                            .child(field("Black", "■  45°"))
-                    })
-                    .when(self.print_method == 2, |body| {
-                        body.child(field("Number of inks", "4"))
-                            .child(
-                                row()
-                                    .child(button("Automatic"))
-                                    .child(button("Pick from image")),
-                            )
-                            .child(swatches())
-                            .child(check("Do not print paper", true))
-                            .when(flat, |body| body.child(slider("Trap", "0.20 mm", 0.2)))
-                            .when(!flat, |body| {
-                                body.child(check("Keep solid areas solid", false))
-                                    .child(slider("Solid detection", "50%", 0.5))
-                            })
-                    }),
-            ))
-            .when(self.print_method == 0 || flat, |side| {
-                side.child(section(
-                    "Dark garment",
-                    column()
-                        .child(check("Print on a dark garment", false))
-                        .child(field("Garment colour", "■  #1b1b1d"))
-                        .child(check("Invert design for garment", false))
-                        .child(check("White underbase", false)),
-                ))
-            })
-            .child(section(
-                "Design size",
-                column()
-                    .child(row().child(button("Fit to page")).child(button("Set size")))
-                    .child(muted("Keep proportions and centre on the page.")),
-            ))
-            .child(section(
-                "Page",
-                column()
-                    .child(label("Page size"))
-                    .child(
-                        row()
-                            .child(button("A5"))
-                            .child(button("A4"))
-                            .child(button("A3")),
-                    )
-                    .child(label("Orientation"))
-                    .child(row().child(button("Portrait")).child(button("Landscape")))
-                    .child(slider("Artwork margin", "28 mm", 0.26)),
-            ))
-            .child(section(
-                "Registration",
-                column()
-                    .child(check("Registration marks", true))
-                    .child(label("Mark layout"))
-                    .child(
-                        row()
-                            .child(button("Six marks"))
-                            .child(button("Four corners")),
-                    )
-                    .child(field("Mark size", "10 mm"))
-                    .child(field("Weight", "2 pt"))
-                    .child(check("Ink name on each plate", true)),
-            ))
-            .child(section(
-                "Output",
-                column()
-                    .child(primary_button("Download layered SVG"))
-                    .child(button("Download plates as ZIP"))
-                    .child(button("Save to Print library")),
-            ))
-    }
-
     pub fn simulate_sidebar(&self, cx: &mut Context<Self>) -> Div {
         column()
             .gap_0()
@@ -527,6 +212,12 @@ impl Workspace {
 
     pub fn stage(&self, cx: &mut Context<Self>) -> Div {
         let stage = div().flex().flex_col().flex_1().min_h_0().overflow_hidden();
+        if matches!(self.screen, Screen::Convert | Screen::Print)
+            && self.editor.source.is_some()
+            && (self.screen == Screen::Print || self.preview != 4)
+        {
+            return self.image_stage(cx);
+        }
         match self.screen {
             Screen::Convert if self.preview == 4 => stage.child(self.batch_stage()),
             Screen::Convert => stage.items_center().justify_center().child(
@@ -534,7 +225,7 @@ impl Workspace {
                     .child(div().size(px(54.0)).rounded(px(12.0)).bg(rgb(0xe7ebf3)).flex().items_center().justify_center().text_2xl().text_color(rgb(0x8999b7)).child("↥"))
                     .child(empty_message("Drop an image to get started", "or open an image from your computer"))
                     .child(muted("PNG, JPG, GIF, WebP, BMP, TIFF"))
-                    .child(button("Choose image…"))),
+                    .child(button("Choose image…").id("choose-image").cursor_pointer().on_click(cx.listener(|this, _, _, cx|this.open_image(cx))))),
             Screen::Compose => stage
                 .child(div().flex().flex_1().min_h_0().p(px(32.0)).items_center().justify_center()
                     .child(column().gap(px(8.0)).size_full().max_w(px(740.0))
@@ -562,7 +253,7 @@ impl Workspace {
             Screen::Help => stage.child(
                 div().id("help-content").size_full().overflow_y_scroll().p(px(40.0))
                     .child(column().gap(px(24.0)).max_w(px(790.0))
-                        .child(div().text_2xl().font_weight(FontWeight::SEMIBOLD).child("A workspace for images and print"))
+                        .child(heading("A workspace for images and print").text_2xl())
                         .child(muted("Convert, compose, separate, and preview — all in one place."))
                         .children([
                             ("Convert", "Prepare raster images for vector tracing. Adjust the look, threshold, colours, and detail. Compare the SVG with the original, or use Batch to organise multiple images."),
@@ -586,12 +277,7 @@ impl Workspace {
             .bg(rgb(PANEL))
             .child(
                 row()
-                    .child(
-                        div()
-                            .text_xs()
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .child("LIBRARY"),
-                    )
+                    .child(heading("LIBRARY").text_xs())
                     .child(self.choices(
                         "shelf-source",
                         &["Convert", "Print"],
@@ -616,11 +302,7 @@ impl Workspace {
                     .bg(rgb(PANEL))
                     .border_b_1()
                     .border_color(rgb(LINE))
-                    .child(
-                        div()
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .child("Batch conversion"),
-                    )
+                    .child(heading("Batch conversion"))
                     .child(muted("0 images"))
                     .child(div().flex_1())
                     .child(button("Stop"))
@@ -648,18 +330,6 @@ impl Workspace {
                     )),
             )
     }
-}
-
-fn pattern_grid() -> Div {
-    column().gap(px(1.0)).children((0..16).map(|_| {
-        row().gap(px(1.0)).children((0..16).map(|_| {
-            div()
-                .size(px(12.0))
-                .bg(rgb(WASH))
-                .border_1()
-                .border_color(rgb(LINE))
-        }))
-    }))
 }
 
 fn artboard() -> Div {

@@ -1,6 +1,4 @@
-use gpui::{
-    Context, Div, FontWeight, IntoElement, Render, Styled, Window, div, prelude::*, px, rgb,
-};
+use gpui::{Context, Div, IntoElement, Render, Styled, Window, div, prelude::*, px, rgb};
 
 use crate::controls::*;
 
@@ -26,6 +24,7 @@ impl Screen {
 
 #[derive(Default)]
 pub struct Workspace {
+    pub editor: crate::editor::Editor,
     pub screen: Screen,
     pub preview: usize,
     pub background: usize,
@@ -45,7 +44,6 @@ pub struct Workspace {
 }
 
 impl Workspace {
-    /// The prototype only stores which presentation is visible, never document data.
     pub fn choices(
         &self,
         id: &'static str,
@@ -71,6 +69,7 @@ impl Workspace {
                     .hover(|style| style.bg(rgb(0xe7ebf2)))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         select(this, index);
+                        this.choice_changed(id, cx);
                         cx.notify();
                     }))
                     .child(label)
@@ -89,12 +88,7 @@ impl Workspace {
                 row()
                     .gap(px(10.0))
                     .w(px(244.0))
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_weight(FontWeight::BOLD)
-                            .child("BITMAN"),
-                    )
+                    .child(heading("BITMAN").text_lg())
                     .child(div().text_xs().text_color(rgb(0x9199a8)).child("0.1")),
             )
             .child(
@@ -116,6 +110,7 @@ impl Workspace {
                             .hover(|style| style.text_color(rgb(0xffffff)))
                             .on_click(cx.listener(move |this, _, _, cx| {
                                 this.screen = screen;
+                                this.request_effects(cx);
                                 cx.notify();
                             }))
                             .child(label)
@@ -125,13 +120,23 @@ impl Workspace {
             .child(
                 row()
                     .gap(px(8.0))
-                    .child(button("Open image…"))
-                    .child(primary_button(match self.screen {
-                        Screen::Compose => "Save as SVG",
-                        Screen::Print => "Download plates",
-                        Screen::Simulate => "Save mock-up",
-                        _ => "Download SVG",
-                    })),
+                    .child(
+                        button("Open image…")
+                            .id("open-image")
+                            .cursor_pointer()
+                            .on_click(cx.listener(|this, _, _, cx| this.open_image(cx))),
+                    )
+                    .child(
+                        primary_button(match self.screen {
+                            Screen::Compose => "Save as SVG",
+                            Screen::Print => "Save layered SVG",
+                            Screen::Simulate => "Save mock-up",
+                            _ => "Download SVG",
+                        })
+                        .id("save-svg")
+                        .cursor_pointer()
+                        .on_click(cx.listener(|this, _, _, cx| this.save_svg(cx))),
+                    ),
             )
     }
 
@@ -152,11 +157,21 @@ impl Workspace {
                 |this, index| this.compose_tool = index,
             ),
             Screen::Print => {
-                let labels: &[&'static str] = match self.print_method {
-                    1 => &["All plates", "Cyan", "Magenta", "Yellow", "Black"],
-                    2 => &["All plates", "Ink 1", "Ink 2", "Ink 3", "Ink 4"],
-                    _ => &["All plates", "Ink"],
-                };
+                const LABELS: [&str; 12] = [
+                    "All plates",
+                    "Ink 1",
+                    "Ink 2",
+                    "Ink 3",
+                    "Ink 4",
+                    "Ink 5",
+                    "Ink 6",
+                    "Ink 7",
+                    "Ink 8",
+                    "Ink 9",
+                    "Ink 10",
+                    "Ink 11",
+                ];
+                let labels = &LABELS[..(self.editor.info.plates + 1).clamp(1, 12)];
                 self.choices(
                     "plates",
                     labels,
@@ -226,6 +241,25 @@ impl Workspace {
     }
 
     fn footer(&self) -> Div {
+        if matches!(self.screen, Screen::Convert | Screen::Print) {
+            let info = self.editor.info;
+            return row()
+                .flex_shrink_0()
+                .px(px(24.0))
+                .py(px(12.0))
+                .bg(rgb(PANEL))
+                .border_t_1()
+                .border_color(rgb(LINE))
+                .child(
+                    column()
+                        .gap(px(3.0))
+                        .child(muted(self.editor.status.clone()))
+                        .child(muted(format!(
+                            "{} paths · {} nodes · {} colours · {} plates",
+                            info.paths, info.nodes, info.palette_len, info.plates
+                        ))),
+                );
+        }
         let content = match self.screen {
             Screen::Convert => row()
                 .child(stat("Image", "No image loaded"))
@@ -261,13 +295,29 @@ impl Workspace {
 }
 
 impl Render for Workspace {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.release_retired_images(window);
         div()
+            .on_drop(cx.listener(|this, paths: &gpui::ExternalPaths, _, cx| {
+                if let Some(path) = paths.paths().first() {
+                    this.load_path(path.clone(), cx);
+                }
+            }))
+            .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| {
+                this.move_effect_slider(event, cx)
+            }))
+            .on_mouse_up(
+                gpui::MouseButton::Left,
+                cx.listener(|this, _, _, cx| {
+                    this.editor.active_slider = None;
+                    cx.notify();
+                }),
+            )
             .flex()
             .flex_col()
             .size_full()
             .overflow_hidden()
-            .font_family(".SystemUIFont")
+            .font_family(crate::fonts::BODY)
             .text_color(rgb(INK))
             .text_sm()
             .bg(rgb(WASH))

@@ -1,4 +1,4 @@
-//! Presentation-only controls. Processing and file actions are deliberately unwired.
+//! Shared labels and control styling; event handlers are supplied by each screen.
 
 use gpui::{Div, IntoElement, Styled, div, prelude::*, px, relative, rgb};
 
@@ -25,6 +25,13 @@ pub fn label(text: &'static str) -> Div {
     div().text_xs().text_color(rgb(INK)).child(text)
 }
 
+pub fn heading(text: &'static str) -> Div {
+    div()
+        .font_family(crate::fonts::DISPLAY)
+        .font_weight(gpui::FontWeight::NORMAL)
+        .child(text)
+}
+
 pub fn labeled_input(title: &'static str, value: &'static str) -> Div {
     column()
         .flex_1()
@@ -40,12 +47,7 @@ pub fn section(title: &'static str, content: impl IntoElement) -> Div {
         .p(px(16.0))
         .border_b_1()
         .border_color(rgb(LINE))
-        .child(
-            div()
-                .text_sm()
-                .font_weight(gpui::FontWeight::SEMIBOLD)
-                .child(title),
-        )
+        .child(heading(title).text_sm())
         .child(content)
 }
 
@@ -103,7 +105,7 @@ pub fn input(value: &'static str) -> Div {
         .child(value)
 }
 
-pub fn slider(label: &'static str, value: &'static str, fraction: f32) -> Div {
+pub fn slider(label: &'static str, value: impl Into<gpui::SharedString>, fraction: f32) -> Div {
     column()
         .gap(px(6.0))
         .child(
@@ -111,7 +113,7 @@ pub fn slider(label: &'static str, value: &'static str, fraction: f32) -> Div {
                 .justify_between()
                 .text_xs()
                 .child(label)
-                .child(div().text_color(rgb(MUTED)).child(value)),
+                .child(div().text_color(rgb(MUTED)).child(value.into())),
         )
         .child(
             div()
@@ -197,11 +199,6 @@ pub fn empty_message(title: &'static str, detail: &'static str) -> Div {
     column()
         .items_center()
         .gap(px(12.0))
-        .child(
-            div()
-                .text_lg()
-                .font_weight(gpui::FontWeight::MEDIUM)
-                .child(title),
-        )
+        .child(heading(title).text_lg())
         .child(muted(detail))
 }

@@ -1,0 +1,47 @@
+[
+  {
+    "file": "sometype-mono/OFL.txt",
+    "source": "https://raw.githubusercontent.com/dharmatype/Sometype-Mono/f21476e52c6c6e88102e7888602b209db3695cc3/OFL.txt",
+    "sha256": "01d5bef6d64692b8f86f49d13ed259875423c1657870ad0f1650ba649f1ab58a"
+  },
+  {
+    "file": "sometype-mono/SometypeMono-Regular.woff2",
+    "source": "https://raw.githubusercontent.com/dharmatype/Sometype-Mono/f21476e52c6c6e88102e7888602b209db3695cc3/fonts/woff2-cffbased/SometypeMono-Regular.woff2",
+    "sha256": "6b6b52196b721b3b3a8cf733bd1f2595d11b391aad1895ba11714995573ea06d"
+  },
+  {
+    "file": "sometype-mono/SometypeMono-RegularItalic.woff2",
+    "source": "https://raw.githubusercontent.com/dharmatype/Sometype-Mono/f21476e52c6c6e88102e7888602b209db3695cc3/fonts/woff2-cffbased/SometypeMono-RegularItalic.woff2",
+    "sha256": "78030ffefb7753708ba9bc1b3a5fa81a33d30460ab24e572e83548e007102959"
+  },
+  {
+    "file": "sometype-mono/SometypeMono-Medium.woff2",
+    "source": "https://raw.githubusercontent.com/dharmatype/Sometype-Mono/f21476e52c6c6e88102e7888602b209db3695cc3/fonts/woff2-cffbased/SometypeMono-Medium.woff2",
+    "sha256": "bace1d83cf9dd6f04e9f8c37180b5e9cddc12baa47a5d44df1bdc601c5f2bf1b"
+  },
+  {
+    "file": "sometype-mono/SometypeMono-MediumItalic.woff2",
+    "source": "https://raw.githubusercontent.com/dharmatype/Sometype-Mono/f21476e52c6c6e88102e7888602b209db3695cc3/fonts/woff2-cffbased/SometypeMono-MediumItalic.woff2",
+    "sha256": "787fd43c8a1b2be856707a976463529c569d6852334e4222d5482b261767554c"
+  },
+  {
+    "file": "sometype-mono/SometypeMono-Bold.woff2",
+    "source": "https://raw.githubusercontent.com/dharmatype/Sometype-Mono/f21476e52c6c6e88102e7888602b209db3695cc3/fonts/woff2-cffbased/SometypeMono-Bold.woff2",
+    "sha256": "4047c347ddc2ead79f7ee66b455ba92247aff85889757301d6443301688b0a89"
+  },
+  {
+    "file": "sometype-mono/SometypeMono-BoldItalic.woff2",
+    "source": "https://raw.githubusercontent.com/dharmatype/Sometype-Mono/f21476e52c6c6e88102e7888602b209db3695cc3/fonts/woff2-cffbased/SometypeMono-BoldItalic.woff2",
+    "sha256": "325ef723af90372a6a92fc160e4540806b0dfb48c31ba3efac294202daa23991"
+  },
+  {
+    "file": "departure-mono/OFL.txt",
+    "source": "https://raw.githubusercontent.com/rektdeckard/departure-mono/75152a3f1e6dacdd248a6c397c97dbf27e33eea0/public/assets/LICENSE",
+    "sha256": "b65e42750f3cb65437a97f4dfd781c58f199259949db2341012be60e32500e83"
+  },
+  {
+    "file": "departure-mono/DepartureMono-1.500.woff2",
+    "source": "https://raw.githubusercontent.com/rektdeckard/departure-mono/75152a3f1e6dacdd248a6c397c97dbf27e33eea0/public/assets/DepartureMono-1.500.woff2",
+    "sha256": "5b4fed1daa90708aa9c6ee1190abca9dc22164a1c1def0020386e46b61038cfb"
+  }
+]

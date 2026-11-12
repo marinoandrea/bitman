@@ -1,12 +1,22 @@
 mod app;
 mod controls;
+mod editor;
+mod effect_ui;
+mod fonts;
 mod screens;
 
 use app::Workspace;
 use gpui::{App, AppContext, Application, Bounds, WindowBounds, WindowOptions, px, size};
 
 fn main() {
+    if std::env::args().any(|argument| argument == "--font-licenses") {
+        println!("{}", fonts::LICENSES);
+        return;
+    }
+
     Application::new().run(|cx: &mut App| {
+        fonts::load(cx);
+
         cx.on_window_closed(|cx| {
             if cx.windows().is_empty() {
                 cx.quit();
@@ -23,9 +33,23 @@ fn main() {
             },
             |window, cx| {
                 window.set_window_title("Bitman");
-                cx.new(|_| Workspace {
-                    shirt_size: 3,
-                    ..Workspace::default()
+                cx.new(|cx| {
+                    let mut workspace = Workspace {
+                        shirt_size: 3,
+                        ..Workspace::default()
+                    };
+                    let mut args = std::env::args().skip(1);
+                    while let Some(arg) = args.next() {
+                        if arg == "--print" {
+                            workspace.screen = app::Screen::Print;
+                        }
+                        if arg == "--open"
+                            && let Some(path) = args.next()
+                        {
+                            workspace.load_path(path.into(), cx);
+                        }
+                    }
+                    workspace
                 })
             },
         )
