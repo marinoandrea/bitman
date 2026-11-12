@@ -6,7 +6,12 @@ mod fonts;
 mod screens;
 
 use app::Workspace;
-use gpui::{App, AppContext, Application, Bounds, WindowBounds, WindowOptions, px, size};
+use gpui::{
+    App, AppContext, Application, Bounds, KeyBinding, Menu, MenuItem, WindowBounds, WindowOptions,
+    actions, px, size,
+};
+
+actions!(bitman, [Quit, CloseWindow]);
 
 fn main() {
     if std::env::args().any(|argument| argument == "--font-licenses") {
@@ -16,6 +21,27 @@ fn main() {
 
     Application::new().run(|cx: &mut App| {
         fonts::load(cx);
+
+        cx.on_action(|_: &Quit, cx| cx.quit());
+        cx.on_action(|_: &CloseWindow, cx| {
+            if let Some(window) = cx.active_window() {
+                let _ = window.update(cx, |_, window, _| window.remove_window());
+            }
+        });
+        cx.bind_keys([
+            KeyBinding::new("cmd-q", Quit, None),
+            KeyBinding::new("cmd-w", CloseWindow, None),
+        ]);
+        cx.set_menus(vec![
+            Menu {
+                name: "Bitman".into(),
+                items: vec![MenuItem::action("Quit Bitman", Quit)],
+            },
+            Menu {
+                name: "File".into(),
+                items: vec![MenuItem::action("Close Window", CloseWindow)],
+            },
+        ]);
 
         cx.on_window_closed(|cx| {
             if cx.windows().is_empty() {

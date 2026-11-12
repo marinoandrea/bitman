@@ -1,13 +1,19 @@
 //! Shared labels and control styling; event handlers are supplied by each screen.
 
-use gpui::{Div, IntoElement, Styled, div, prelude::*, px, relative, rgb};
+use gpui::{
+    Div, IntoElement, PathBuilder, Pixels, Point, Styled, Window, canvas, div, point, prelude::*,
+    px, relative, rgb,
+};
 
-pub const INK: u32 = 0x252931;
-pub const MUTED: u32 = 0x858b94;
-pub const LINE: u32 = 0xe1e4e8;
-pub const PANEL: u32 = 0xffffff;
-pub const ACCENT: u32 = 0x315ed8;
-pub const WASH: u32 = 0xf4f5f7;
+// Boot Tool's boottool/static/index.html palette at the revision in README.md.
+pub const INK: u32 = 0x000000;
+pub const MUTED: u32 = 0x6b6b6b;
+pub const LINE: u32 = 0x000000;
+pub const PANEL: u32 = 0xdcdcdc;
+pub const ACCENT: u32 = 0x404040;
+pub const WASH: u32 = 0xd3d3d3;
+pub const BUTTON: u32 = 0xefefef;
+pub const WHITE: u32 = 0xffffff;
 
 pub fn column() -> Div {
     div().flex().flex_col().gap(px(12.0))
@@ -47,7 +53,14 @@ pub fn section(title: &'static str, content: impl IntoElement) -> Div {
         .p(px(16.0))
         .border_b_1()
         .border_color(rgb(LINE))
-        .child(heading(title).text_sm())
+        .child(
+            heading(title)
+                .text_sm()
+                .px(px(12.0))
+                .py(px(6.0))
+                .bg(rgb(ACCENT))
+                .text_color(rgb(WHITE)),
+        )
         .child(content)
 }
 
@@ -61,17 +74,78 @@ pub fn button(text: &'static str) -> Div {
         .rounded(px(5.0))
         .border_1()
         .border_color(rgb(LINE))
-        .bg(rgb(PANEL))
-        .text_color(rgb(MUTED))
+        .bg(rgb(BUTTON))
+        .text_color(rgb(INK))
         .text_xs()
         .child(text)
 }
 
 pub fn primary_button(text: &'static str) -> Div {
-    button(text)
-        .bg(rgb(0xe3e9fa))
-        .border_color(rgb(0xe3e9fa))
-        .text_color(rgb(0x879acb))
+    button(text).bg(rgb(ACCENT)).text_color(rgb(WHITE))
+}
+
+pub fn picker_button(text: &'static str) -> Div {
+    button("")
+        .gap(px(6.0))
+        .child(
+            canvas(
+                |_, _, _| (),
+                |bounds, (), window, _| paint_eyedropper(bounds.origin, window),
+            )
+            .size(px(14.0))
+            .flex_shrink_0(),
+        )
+        .child(text)
+}
+
+/// A compact button glyph; the sampling cursor is supplied natively by GPUI.
+fn paint_eyedropper(origin: Point<Pixels>, window: &mut Window) {
+    let scale = 14.0 / 26.0;
+    let position = |x, y| origin + point(px((x + 1.0) * scale), px((y + 1.0) * scale));
+    let contours: &[(&[(f32, f32)], u32)] = &[
+        (
+            &[
+                (2.0, 22.0),
+                (3.0, 17.0),
+                (13.0, 7.0),
+                (17.0, 11.0),
+                (7.0, 21.0),
+            ],
+            WHITE,
+        ),
+        (
+            &[
+                (12.0, 6.0),
+                (17.0, 1.0),
+                (20.0, 1.0),
+                (23.0, 4.0),
+                (23.0, 7.0),
+                (18.0, 12.0),
+            ],
+            ACCENT,
+        ),
+        (
+            &[(10.0, 6.0), (12.0, 4.0), (20.0, 12.0), (18.0, 14.0)],
+            ACCENT,
+        ),
+    ];
+    for &(points, fill) in contours {
+        for (width, color) in [(4.0, WHITE), (0.0, fill), (1.5, INK)] {
+            let mut path = if width == 0.0 {
+                PathBuilder::fill()
+            } else {
+                PathBuilder::stroke(px(width * scale))
+            };
+            path.move_to(position(points[0].0, points[0].1));
+            for &(x, y) in &points[1..] {
+                path.line_to(position(x, y));
+            }
+            path.close();
+            if let Ok(path) = path.build() {
+                window.paint_path(path, rgb(color));
+            }
+        }
+    }
 }
 
 pub fn field(label: &'static str, value: &'static str) -> Div {
@@ -86,8 +160,9 @@ pub fn field(label: &'static str, value: &'static str) -> Div {
                 .rounded(px(4.0))
                 .border_1()
                 .border_color(rgb(LINE))
+                .bg(rgb(WHITE))
                 .text_xs()
-                .text_color(rgb(MUTED))
+                .text_color(rgb(INK))
                 .child(value),
         )
 }
@@ -100,8 +175,9 @@ pub fn input(value: &'static str) -> Div {
         .rounded(px(4.0))
         .border_1()
         .border_color(rgb(LINE))
+        .bg(rgb(WHITE))
         .text_xs()
-        .text_color(rgb(MUTED))
+        .text_color(rgb(INK))
         .child(value)
 }
 
@@ -126,7 +202,7 @@ pub fn slider(label: &'static str, value: impl Into<gpui::SharedString>, fractio
                         .h(px(3.0))
                         .w_full()
                         .rounded_full()
-                        .bg(rgb(LINE)),
+                        .bg(rgb(WHITE)),
                 )
                 .child(
                     div()
@@ -135,7 +211,7 @@ pub fn slider(label: &'static str, value: impl Into<gpui::SharedString>, fractio
                         .h(px(3.0))
                         .w(relative(fraction))
                         .rounded_full()
-                        .bg(rgb(0x9baacb)),
+                        .bg(rgb(ACCENT)),
                 )
                 .child(
                     div()
@@ -145,8 +221,8 @@ pub fn slider(label: &'static str, value: impl Into<gpui::SharedString>, fractio
                         .size(px(11.0))
                         .rounded_full()
                         .border_1()
-                        .border_color(rgb(0x9baacb))
-                        .bg(rgb(PANEL)),
+                        .border_color(rgb(LINE))
+                        .bg(rgb(ACCENT)),
                 ),
         )
 }
@@ -162,9 +238,9 @@ pub fn check(label: &'static str, checked: bool) -> Div {
                 .size(px(14.0))
                 .rounded(px(3.0))
                 .border_1()
-                .border_color(rgb(if checked { 0x9baacb } else { LINE }))
-                .bg(rgb(if checked { 0xeaf0ff } else { PANEL }))
-                .text_color(rgb(ACCENT))
+                .border_color(rgb(LINE))
+                .bg(rgb(if checked { ACCENT } else { WHITE }))
+                .text_color(rgb(WHITE))
                 .child(if checked { "✓" } else { "" }),
         )
         .child(label)

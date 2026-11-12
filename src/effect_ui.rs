@@ -208,7 +208,7 @@ impl Workspace {
                 ),
             )
             .child(
-                button(if self.editor.picking {
+                picker_button(if self.editor.picking {
                     "Cancel colour picker"
                 } else {
                     "Pick colour from image"
@@ -508,7 +508,7 @@ impl Workspace {
                                         cx,
                                     ))
                                     .child(
-                                        button("Pick inks…")
+                                        picker_button("Pick inks…")
                                             .id("pick-spots")
                                             .cursor_pointer()
                                             .on_click(cx.listener(|this, _, _, cx| {
@@ -559,7 +559,7 @@ impl Workspace {
                             p.dark_bg[0], p.dark_bg[1], p.dark_bg[2]
                         )))
                         .child(
-                            button("Pick garment colour…")
+                            picker_button("Pick garment colour…")
                                 .id("pick-garment")
                                 .cursor_pointer()
                                 .on_click(cx.listener(|this, _, _, cx| {
@@ -664,7 +664,7 @@ impl Workspace {
                             rect.origin + gpui::point(width * i as f32, rect.size.height - height),
                             gpui::size(width, height),
                         );
-                        window.paint_quad(gpui::fill(bounds, rgb(0x9baacb)));
+                        window.paint_quad(gpui::fill(bounds, rgb(ACCENT)));
                     }
                 },
             )
@@ -681,9 +681,9 @@ impl Workspace {
                         .id(("stamp", y * 16 + x))
                         .size(px(14.0))
                         .bg(rgb(if self.editor.params.stamp[y] & (1 << x) != 0 {
-                            INK
+                            ACCENT
                         } else {
-                            WASH
+                            WHITE
                         }))
                         .border_1()
                         .border_color(rgb(LINE))
@@ -703,12 +703,13 @@ impl Workspace {
         let preview = self.editor.preview.as_ref().unwrap_or(&source).clone();
         let original = self.editor.picking || (self.screen == Screen::Convert && self.preview == 1);
         let bounds = self.editor.bounds.clone();
+        let picking = self.editor.picking;
         let bg = if self.background == 1 {
-            0x20242b
+            ACCENT
         } else if self.background == 2 {
-            0xd9dde4
+            WASH
         } else {
-            0xffffff
+            WHITE
         };
         let mut content = div()
             .relative()
@@ -718,6 +719,7 @@ impl Workspace {
             .h(px(0.0))
             .w_full()
             .overflow_hidden()
+            .when(picking, |content| content.cursor_crosshair())
             .bg(rgb(bg));
         if self.screen == Screen::Convert && self.preview == 2 && !self.editor.picking {
             content = content

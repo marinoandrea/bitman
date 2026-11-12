@@ -82,8 +82,12 @@ cargo run --locked --example effect_gallery -- /tmp/bitman-effect-gallery
 - `src/effects/`: standard-library-only numerical kernels and SVG generation.
 - `tests/effects.rs`: numerical, topology, safety, threading, and allocation checks.
 
-The layout reference is `sshhiiff/boot-tool` at commit
-`5bd1a4303093d01bbab3d1f5b61cbc8f19699e3a`. No Python code or Paper.js was copied. No image-processing package, UI component
+The layout and interface palette reference is `sshhiiff/boot-tool` at commit
+`5bd1a4303093d01bbab3d1f5b61cbc8f19699e3a`. The palette follows its
+[`boottool/static/index.html`](https://github.com/sshhiiff/Boot-Tool/blob/5bd1a4303093d01bbab3d1f5b61cbc8f19699e3a/boottool/static/index.html)
+stylesheet: charcoal `#404040`, background `#d3d3d3`, panels `#dcdcdc`, buttons
+`#efefef`, muted text `#6b6b6b`, and black/white borders, text, and fields.
+No Python code or Paper.js was copied. No image-processing package, UI component
 kit, or runtime asset download was added.
 
 ## Checks

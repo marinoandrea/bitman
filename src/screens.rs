@@ -222,7 +222,7 @@ impl Workspace {
             Screen::Convert if self.preview == 4 => stage.child(self.batch_stage()),
             Screen::Convert => stage.items_center().justify_center().child(
                 column().items_center().gap(px(22.0)).p(px(48.0))
-                    .child(div().size(px(54.0)).rounded(px(12.0)).bg(rgb(0xe7ebf3)).flex().items_center().justify_center().text_2xl().text_color(rgb(0x8999b7)).child("↥"))
+                    .child(div().size(px(54.0)).rounded(px(12.0)).bg(rgb(BUTTON)).flex().items_center().justify_center().text_2xl().text_color(rgb(ACCENT)).child("↥"))
                     .child(empty_message("Drop an image to get started", "or open an image from your computer"))
                     .child(muted("PNG, JPG, GIF, WebP, BMP, TIFF"))
                     .child(button("Choose image…").id("choose-image").cursor_pointer().on_click(cx.listener(|this, _, _, cx|this.open_image(cx))))),
@@ -239,7 +239,7 @@ impl Workspace {
                 .child(self.library_shelf(cx)),
             Screen::Print => stage.items_center().justify_center().child(
                 column().items_center().gap(px(20.0))
-                    .child(div().w(px(480.0)).h(px(340.0)).bg(rgb(PANEL)).border_1().border_color(rgb(LINE)).shadow_sm()
+                    .child(div().w(px(480.0)).h(px(340.0)).bg(rgb(WHITE)).border_1().border_color(rgb(LINE)).shadow_sm()
                         .flex().items_center().justify_center()
                         .child(empty_message("Your print starts here", "Open an image to preview the separated plates")))
                     .child(muted("A4 · 297 × 210 mm · Landscape"))),
@@ -345,8 +345,8 @@ fn artboard() -> Div {
                         (bounds.size.height - height) / 2.0,
                     );
                 let page = gpui::Bounds::new(origin, gpui::size(width, height));
-                window.paint_quad(gpui::fill(page, rgb(PANEL)));
-                window.paint_quad(gpui::outline(page, rgb(0xd8dce2), Default::default()));
+                window.paint_quad(gpui::fill(page, rgb(WHITE)));
+                window.paint_quad(gpui::outline(page, rgb(LINE), Default::default()));
             },
         )
         .size_full(),
@@ -410,7 +410,7 @@ fn shirt(long_sleeve: bool) -> Div {
                     path.curve_to(p(0.38, 0.08), p(0.5, 0.27));
                     path.close();
                     if let Ok(path) = path.build() {
-                        window.paint_path(path, rgb(if fill { 0xfefefe } else { 0xb6becb }));
+                        window.paint_path(path, rgb(if fill { WHITE } else { MUTED }));
                     }
                 }
                 let mut seams = PathBuilder::stroke(px(1.0));
@@ -419,7 +419,7 @@ fn shirt(long_sleeve: bool) -> Div {
                 seams.move_to(p(0.36, 0.095));
                 seams.curve_to(p(0.64, 0.095), p(0.5, 0.29));
                 if let Ok(path) = seams.build() {
-                    window.paint_path(path, rgb(0xd6dce4));
+                    window.paint_path(path, rgb(PANEL));
                 }
             },
         )

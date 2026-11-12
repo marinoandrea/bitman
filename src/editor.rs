@@ -213,6 +213,8 @@ impl Workspace {
         let source_id = source.id.0;
         let reuse = self.editor.last == Some((params, source_id));
         let revision = self.editor.revision;
+        let screen = self.screen;
+        let selected_plate = self.plate;
         let plate = if self.screen == Screen::Print && self.plate > 0 {
             Some(self.plate - 1)
         } else {
@@ -291,9 +293,17 @@ impl Workspace {
                 } else {
                     None
                 };
-                if revision == this.editor.revision {
+                // Show completed frames while controls keep changing; waiting for an
+                // exact revision would starve the preview throughout a slider drag.
+                // Frames from another image, workspace, or plate must still be ignored.
+                if this.editor.source.as_ref().map(|source| source.id.0) == Some(source_id)
+                    && this.screen == screen
+                    && (screen != Screen::Print || this.plate == selected_plate)
+                {
                     this.editor.info = engine.info;
-                    this.plate = this.plate.min(engine.info.plates);
+                    if revision == this.editor.revision {
+                        this.plate = this.plate.min(engine.info.plates);
+                    }
                     this.editor.milliseconds = ms;
                     match result {
                         Ok(image) => {
@@ -308,7 +318,10 @@ impl Workspace {
                                 effects::simd::backend()
                             );
                         }
-                        Err(error) => this.editor.status = error,
+                        Err(error) if revision == this.editor.revision => {
+                            this.editor.status = error;
+                        }
+                        Err(_) => {}
                     }
                 }
                 this.editor.engine = Some(engine);

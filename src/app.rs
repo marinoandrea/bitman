@@ -2,6 +2,8 @@ use gpui::{Context, Div, IntoElement, Render, Styled, Window, div, prelude::*, p
 
 use crate::controls::*;
 
+const SIDEBAR_WIDTH: f32 = 300.0;
+
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub enum Screen {
     #[default]
@@ -63,10 +65,10 @@ impl Workspace {
                     .py(px(7.0))
                     .rounded(px(4.0))
                     .text_xs()
-                    .bg(rgb(if active { 0xeaf0ff } else { WASH }))
-                    .text_color(rgb(if active { ACCENT } else { MUTED }))
+                    .bg(rgb(if active { ACCENT } else { BUTTON }))
+                    .text_color(rgb(if active { WHITE } else { INK }))
                     .cursor_pointer()
-                    .hover(|style| style.bg(rgb(0xe7ebf2)))
+                    .hover(move |style| style.bg(rgb(if active { ACCENT } else { WHITE })))
                     .on_click(cx.listener(move |this, _, _, cx| {
                         select(this, index);
                         this.choice_changed(id, cx);
@@ -80,42 +82,48 @@ impl Workspace {
         row()
             .h(px(66.0))
             .flex_shrink_0()
-            .px(px(24.0))
-            .gap(px(32.0))
-            .bg(rgb(0x20242b))
-            .text_color(rgb(0xffffff))
-            .child(
-                row()
-                    .gap(px(10.0))
-                    .w(px(244.0))
-                    .child(heading("BITMAN").text_lg())
-                    .child(div().text_xs().text_color(rgb(0x9199a8)).child("0.1")),
-            )
+            .pr(px(24.0))
+            .gap_0()
+            .border_b_1()
+            .border_color(rgb(LINE))
+            .bg(rgb(PANEL))
+            .text_color(rgb(INK))
             .child(
                 row()
                     .h_full()
-                    .gap(px(24.0))
-                    .children(Screen::ALL.into_iter().map(|(screen, label)| {
-                        let active = self.screen == screen;
-                        div()
-                            .id(label)
-                            .h_full()
-                            .flex()
-                            .items_center()
-                            .border_b_2()
-                            .border_color(rgb(if active { 0x98b1ff } else { 0x20242b }))
-                            .text_sm()
-                            .text_color(rgb(if active { 0xffffff } else { 0xa2a8b3 }))
-                            .cursor_pointer()
-                            .hover(|style| style.text_color(rgb(0xffffff)))
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                this.screen = screen;
-                                this.request_effects(cx);
-                                cx.notify();
-                            }))
-                            .child(label)
-                    })),
+                    .px(px(16.0))
+                    .bg(rgb(ACCENT))
+                    .text_color(rgb(WHITE))
+                    .gap(px(10.0))
+                    .w(px(SIDEBAR_WIDTH))
+                    .flex_shrink_0()
+                    .child(heading("BITMAN").text_lg())
+                    .child(div().text_xs().text_color(rgb(BUTTON)).child("0.1")),
             )
+            .child(row().h_full().gap_0().children(Screen::ALL.into_iter().map(
+                |(screen, label)| {
+                    let active = self.screen == screen;
+                    div()
+                        .id(label)
+                        .h_full()
+                        .px(px(12.0))
+                        .flex()
+                        .items_center()
+                        .border_b_2()
+                        .border_color(rgb(if active { INK } else { PANEL }))
+                        .bg(rgb(if active { ACCENT } else { PANEL }))
+                        .text_sm()
+                        .text_color(rgb(if active { WHITE } else { INK }))
+                        .cursor_pointer()
+                        .hover(move |style| style.bg(rgb(if active { ACCENT } else { BUTTON })))
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.screen = screen;
+                            this.request_effects(cx);
+                            cx.notify();
+                        }))
+                        .child(label)
+                },
+            )))
             .child(div().flex_1())
             .child(
                 row()
@@ -230,7 +238,7 @@ impl Workspace {
         };
         div()
             .id("inspector")
-            .w(px(300.0))
+            .w(px(SIDEBAR_WIDTH))
             .h_full()
             .flex_shrink_0()
             .overflow_y_scroll()
