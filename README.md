@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="assets/readme-logo.png" alt="Bitman" width="667">
+  <img src="assets/readme-logo.png" alt="Bitman" width="400">
 </h1>
 
 <p align="center">
@@ -8,7 +8,6 @@
   <a href="https://github.com/marinoandrea/bitman/releases"><img src="https://img.shields.io/github/v/release/marinoandrea/bitman?color=71F7EE&amp;style=flat" alt="Latest release"></a>
   <a href="Cargo.toml"><img src="https://img.shields.io/badge/Rust-1.99%2B-71F7EE?style=flat&amp;logo=rust&amp;logoColor=white" alt="Rust 1.99 or newer"></a>
   <a href="https://github.com/marinoandrea/bitman/pulls?q=is%3Apr+author%3Aapp%2Fdependabot"><img src="https://img.shields.io/badge/Dependabot-weekly-71F7EE?style=flat&amp;logo=dependabot&amp;logoColor=white" alt="Weekly Dependabot updates for Cargo and GitHub Actions"></a>
-  <a href="https://www.conventionalcommits.org/en/v1.0.0/"><img src="https://img.shields.io/badge/Conventional_Commits-1.0.0-71F7EE?style=flat" alt="Conventional Commits 1.0.0"></a>
 </p>
 
 A native GPUI image and print workspace rewrite of [Boot Tool](https://github.com/sshhiiff/Boot-Tool).
@@ -19,3 +18,15 @@ All credits go to the original author [sshhiiff](https://github.com/sshhiiff) fo
 
 The original project does not make full use of native desktop performance.
 This rewrite simply implements efficient image processing by leveraging native primitives such as SIMD and efficient memory allocations.
+
+While the original tool can also be bundled as an application, it still renders in a browser engine.
+This GPUI rewrite makes it into a fully standolone binary executable with targeted platform builds.
+
+## How to use
+
+Just pick your platform and download the application from the [release page].
+
+## Licensing
+
+For the time being, the original project does not have a license, and we vouch to keep our own licensing in sync with it when and if it happens to introduce one for as long as this project constitutes substantially a 1:1 replica.
+We might want to refactor this in the future if the project changes and grows beyond the original design.
