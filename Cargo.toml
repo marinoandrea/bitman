@@ -12,6 +12,9 @@ gpui = { version = "0.2.2", default-features = false, features = ["font-kit", "r
 
 [target.'cfg(target_os = "linux")'.dependencies]
 gpui = { version = "0.2.2", default-features = false, features = ["wayland", "x11"] }
+# GPUI -> zed-async-tar -> xattr 0.2 uses ENOATTR, removed on Linux in libc 0.2.190.
+# Remove this compatibility constraint when GPUI replaces that xattr dependency.
+libc = "=0.2.189"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 gpui = { version = "0.2.2", default-features = false, features = ["windows-manifest"] }
