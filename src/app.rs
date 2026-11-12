@@ -74,6 +74,7 @@ impl Workspace {
     }
 
     fn show_screen(&mut self, screen: Screen, cx: &mut Context<Self>) {
+        self.editor.active_slider = None;
         if !self.commit_compose_input(cx) {
             return;
         }
@@ -546,11 +547,15 @@ impl Render for Workspace {
             // A release can be missed when the pointer leaves the window. A new
             // press must never resume that old drag, including presses on buttons.
             .capture_any_mouse_down(cx.listener(|this, _, _, _| {
+                this.editor.active_slider = None;
+                this.end_simulation_drag();
                 this.end_compose_drag();
             }))
             .on_mouse_up_out(
                 gpui::MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
+                    this.editor.active_slider = None;
+                    this.end_simulation_drag();
                     this.end_compose_drag();
                     cx.notify();
                 }),

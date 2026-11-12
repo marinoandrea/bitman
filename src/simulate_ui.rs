@@ -470,6 +470,7 @@ impl Workspace {
                     ((v - min) / (max - min)).clamp(0.0, 1.0),
                 )
                 .id(("placement-slider", key as usize))
+                .debug_selector(|| title.into())
                 .relative()
                 .cursor_pointer()
                 .child(

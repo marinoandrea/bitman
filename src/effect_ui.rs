@@ -9,6 +9,10 @@ use gpui::{
     prelude::*, px, rgb,
 };
 
+#[cfg(test)]
+#[path = "slider_tests.rs"]
+mod slider_tests;
+
 macro_rules! numbers {
     ($($id:ident: $field:ident, $ty:ty, $min:expr, $max:expr, $step:expr, $unit:literal;)*) => {
         #[derive(Clone,Copy)] #[repr(usize)] pub enum Number {$($id,)*}
@@ -68,6 +72,7 @@ impl Workspace {
         slider(title, value, (v - min) / (max - min))
             .relative()
             .id(("effect-slider", key as usize))
+            .debug_selector(|| title.into())
             .cursor_pointer()
             .child(
                 canvas(
@@ -121,7 +126,9 @@ impl Workspace {
         }
     }
     pub fn move_effect_slider(&mut self, event: &MouseMoveEvent, cx: &mut Context<Self>) {
-        if event.pressed_button != Some(MouseButton::Left) {
+        if !matches!(self.screen, Screen::Convert | Screen::Print)
+            || event.pressed_button != Some(MouseButton::Left)
+        {
             self.editor.active_slider = None;
             return;
         }
@@ -152,6 +159,7 @@ impl Workspace {
     ) -> gpui::Stateful<Div> {
         button(title)
             .id(title)
+            .debug_selector(|| title.into())
             .cursor_pointer()
             .on_click(cx.listener(move |this, _, _, cx| {
                 change(&mut this.editor.params);
