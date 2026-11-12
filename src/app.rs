@@ -44,7 +44,7 @@ pub struct Workspace {
     pub print_shape: usize,
     pub dither: usize,
     pub compose_tool: usize,
-    pub library: usize,
+    pub compose: crate::compose_ui::ComposeUi,
     pub simulation: crate::simulate_ui::SimulationUi,
 }
 
@@ -66,7 +66,7 @@ impl Workspace {
             print_shape: 0,
             dither: 0,
             compose_tool: 0,
-            library: 0,
+            compose: crate::compose_ui::ComposeUi::default(),
             simulation: crate::simulate_ui::SimulationUi::default(),
         };
         workspace.start_update_checks(cx);
@@ -74,8 +74,15 @@ impl Workspace {
     }
 
     fn show_screen(&mut self, screen: Screen, cx: &mut Context<Self>) {
+        if !self.commit_compose_input(cx) {
+            return;
+        }
         self.end_simulation_drag();
+        self.end_compose_drag();
         self.screen = screen;
+        if screen == Screen::Compose {
+            self.render_compose(cx);
+        }
         if screen == Screen::Simulate {
             self.render_simulation(cx);
         }
@@ -116,6 +123,11 @@ impl Workspace {
     }
 
     fn header(&self, cx: &mut Context<Self>) -> Div {
+        let can_save = if self.screen == Screen::Simulate {
+            self.can_export_mockup()
+        } else {
+            self.can_export_svg()
+        };
         row()
             .h(px(66.0))
             .flex_shrink_0()
@@ -183,22 +195,16 @@ impl Workspace {
                         })
                         .id("save-svg")
                         .cursor_pointer()
-                        .when(
-                            self.screen != Screen::Simulate || self.can_export_mockup(),
-                            |b| {
-                                b.on_click(cx.listener(|this, _, _, cx| {
-                                    if this.screen == Screen::Simulate {
-                                        this.save_mockup(cx);
-                                    } else {
-                                        this.save_svg(cx);
-                                    }
-                                }))
-                            },
-                        )
-                        .when(
-                            self.screen == Screen::Simulate && !self.can_export_mockup(),
-                            |b| b.opacity(0.45),
-                        ),
+                        .when(can_save, |b| {
+                            b.on_click(cx.listener(|this, _, _, cx| {
+                                if this.screen == Screen::Simulate {
+                                    this.save_mockup(cx);
+                                } else {
+                                    this.save_svg(cx);
+                                }
+                            }))
+                        })
+                        .when(!can_save, |b| b.opacity(0.45)),
                     ),
             )
     }
@@ -266,8 +272,26 @@ impl Workspace {
             .child(tabs)
             .when(self.screen == Screen::Compose, |bar| {
                 bar.child(muted("│"))
-                    .child(button("Undo"))
-                    .child(button("Redo"))
+                    .child(
+                        button("Undo")
+                            .id("compose-undo")
+                            .when(self.compose.document.can_undo(), |b| {
+                                b.cursor_pointer().on_click(
+                                    cx.listener(|this, _, _, cx| this.compose_undo(false, cx)),
+                                )
+                            })
+                            .when(!self.compose.document.can_undo(), |b| b.opacity(0.4)),
+                    )
+                    .child(
+                        button("Redo")
+                            .id("compose-redo")
+                            .when(self.compose.document.can_redo(), |b| {
+                                b.cursor_pointer().on_click(
+                                    cx.listener(|this, _, _, cx| this.compose_undo(true, cx)),
+                                )
+                            })
+                            .when(!self.compose.document.can_redo(), |b| b.opacity(0.4)),
+                    )
             })
             .child(div().flex_1())
             .when(self.screen == Screen::Convert && self.preview != 4, |bar| {
@@ -282,6 +306,12 @@ impl Workspace {
             .child(
                 button("Fit")
                     .id("fit-view")
+                    .when(self.screen == Screen::Compose, |b| {
+                        b.cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                            this.compose.actual_size = false;
+                            cx.notify();
+                        }))
+                    })
                     .when(self.screen == Screen::Simulate, |b| {
                         b.cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                             this.simulation.actual_size = false;
@@ -292,6 +322,12 @@ impl Workspace {
             .child(
                 button("100%")
                     .id("actual-view")
+                    .when(self.screen == Screen::Compose, |b| {
+                        b.cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
+                            this.compose.actual_size = true;
+                            cx.notify();
+                        }))
+                    })
                     .when(self.screen == Screen::Simulate, |b| {
                         b.cursor_pointer().on_click(cx.listener(|this, _, _, cx| {
                             this.simulation.actual_size = true;
@@ -322,6 +358,17 @@ impl Workspace {
                 matches!(self.screen, Screen::Convert | Screen::Print),
                 |side| {
                     side.child(section(
+                        "Composition",
+                        button("Add to Compose")
+                            .id("send-to-compose")
+                            .when(self.can_export_svg(), |b| {
+                                b.cursor_pointer().on_click(
+                                    cx.listener(|this, _, _, cx| this.send_to_compose(cx)),
+                                )
+                            })
+                            .when(!self.can_export_svg(), |b| b.opacity(0.45)),
+                    ))
+                    .child(section(
                         "Mock-up",
                         button("Add to Simulate")
                             .id("send-to-simulate")
@@ -338,6 +385,29 @@ impl Workspace {
     }
 
     fn footer(&self) -> Div {
+        if self.screen == Screen::Compose {
+            let page = &self.compose.document.page;
+            return column()
+                .flex_shrink_0()
+                .px(px(20.))
+                .py(px(10.))
+                .bg(rgb(PANEL))
+                .border_t_1()
+                .border_color(rgb(LINE))
+                .child(muted(format!(
+                    "{:.1} × {:.1} mm · {} objects · {} selected · {}",
+                    page.size[0],
+                    page.size[1],
+                    page.objects.len(),
+                    page.selected.len(),
+                    if self.compose.actual_size {
+                        "100% (96 dpi)"
+                    } else {
+                        "Fit"
+                    }
+                )))
+                .child(muted(self.compose.status.clone()));
+        }
         if self.screen == Screen::Simulate {
             return column()
                 .flex_shrink_0()
@@ -430,6 +500,14 @@ impl Render for Workspace {
             .when(self.can_export_svg(), |view| {
                 view.on_action(cx.listener(|this, _: &ExportSvg, _, cx| this.save_svg(cx)))
             })
+            .when(self.screen == Screen::Compose, |view| view
+                .on_action(cx.listener(|this, _: &Undo, _, cx| this.compose_undo(false, cx)))
+                .on_action(cx.listener(|this, _: &Redo, _, cx| this.compose_undo(true, cx)))
+                .on_action(cx.listener(|this, _: &RemoveArtwork, _, cx| this.remove_compose_selection(cx)))
+                .on_action(cx.listener(|this, _: &SelectAll, _, cx| this.compose_select_all(cx)))
+                .when(self.compose.edit.is_some(), |v| v.on_action(cx.listener(|this, _: &Copy, _, cx| this.compose_clipboard(false, cx))).on_action(cx.listener(|this, _: &Cut, _, cx| this.compose_clipboard(true, cx))).on_action(cx.listener(|this, _: &Paste, window, cx| this.compose_paste(window, cx))))
+                .on_key_down(cx.listener(|this, event, _, cx| this.compose_key_down(event, cx))))
+            .on_action(cx.listener(|this, _: &ShowCompose, _, cx| this.show_screen(Screen::Compose, cx)))
             .on_action(cx.listener(|this, _: &ShowConvert, _, cx| this.show_screen(Screen::Convert, cx)))
             .on_action(cx.listener(|this, _: &ShowPrint, _, cx| this.show_screen(Screen::Print, cx)))
             .on_action(cx.listener(|this, _: &ShowSimulate, _, cx| this.show_screen(Screen::Simulate, cx)))
@@ -454,6 +532,8 @@ impl Render for Workspace {
             .on_drop(cx.listener(|this, paths: &gpui::ExternalPaths, _, cx| {
                 if this.screen == Screen::Simulate {
                     for path in paths.paths() { this.load_simulation_path(path.clone(), cx); }
+                } else if this.screen == Screen::Compose {
+                    for path in paths.paths() { this.load_compose_path(path.clone(), cx); }
                 } else if let Some(path) = paths.paths().first() {
                     this.load_path(path.clone(), cx);
                 }
@@ -461,12 +541,26 @@ impl Render for Workspace {
             .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| {
                 this.move_effect_slider(event, cx);
                 this.move_simulation_pointer(event, cx);
+                this.move_compose_pointer(event, cx);
             }))
+            // A release can be missed when the pointer leaves the window. A new
+            // press must never resume that old drag, including presses on buttons.
+            .capture_any_mouse_down(cx.listener(|this, _, _, _| {
+                this.end_compose_drag();
+            }))
+            .on_mouse_up_out(
+                gpui::MouseButton::Left,
+                cx.listener(|this, _, _, cx| {
+                    this.end_compose_drag();
+                    cx.notify();
+                }),
+            )
             .on_mouse_up(
                 gpui::MouseButton::Left,
                 cx.listener(|this, _, _, cx| {
                     this.editor.active_slider = None;
                     this.end_simulation_drag();
+                    this.end_compose_drag();
                     cx.notify();
                 }),
             )

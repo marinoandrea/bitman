@@ -38,15 +38,6 @@ pub fn heading(text: &'static str) -> Div {
         .child(text)
 }
 
-pub fn labeled_input(title: &'static str, value: &'static str) -> Div {
-    column()
-        .flex_1()
-        .min_w_0()
-        .gap(px(6.0))
-        .child(label(title))
-        .child(input(value))
-}
-
 pub fn section(title: &'static str, content: impl IntoElement) -> Div {
     column()
         .gap(px(14.0))
@@ -148,39 +139,6 @@ fn paint_eyedropper(origin: Point<Pixels>, window: &mut Window) {
     }
 }
 
-pub fn field(label: &'static str, value: &'static str) -> Div {
-    row()
-        .justify_between()
-        .child(div().text_xs().child(label))
-        .child(
-            div()
-                .min_w(px(88.0))
-                .px(px(10.0))
-                .py(px(6.0))
-                .rounded(px(4.0))
-                .border_1()
-                .border_color(rgb(LINE))
-                .bg(rgb(WHITE))
-                .text_xs()
-                .text_color(rgb(INK))
-                .child(value),
-        )
-}
-
-pub fn input(value: &'static str) -> Div {
-    div()
-        .w_full()
-        .px(px(10.0))
-        .py(px(8.0))
-        .rounded(px(4.0))
-        .border_1()
-        .border_color(rgb(LINE))
-        .bg(rgb(WHITE))
-        .text_xs()
-        .text_color(rgb(INK))
-        .child(value)
-}
-
 pub fn slider(label: &'static str, value: impl Into<gpui::SharedString>, fraction: f32) -> Div {
     column()
         .gap(px(6.0))
@@ -244,23 +202,6 @@ pub fn check(label: &'static str, checked: bool) -> Div {
                 .child(if checked { "✓" } else { "" }),
         )
         .child(label)
-}
-
-pub fn swatches() -> Div {
-    row().gap(px(6.0)).children(
-        [
-            0xffffff, 0x22252b, 0x315ed8, 0xd44a54, 0xe9bc46, 0x49866c, 0xb49bc8,
-        ]
-        .into_iter()
-        .map(|color| {
-            div()
-                .size(px(24.0))
-                .rounded(px(4.0))
-                .border_1()
-                .border_color(rgb(LINE))
-                .bg(rgb(color))
-        }),
-    )
 }
 
 pub fn stat(label: &'static str, value: &'static str) -> Div {

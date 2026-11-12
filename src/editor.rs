@@ -25,7 +25,7 @@ pub struct Editor {
     pub status: String,
     pub milliseconds: f64,
     revision: u64,
-    load_revision: u64,
+    pub(crate) load_revision: u64,
     last: Option<(Params, usize)>,
     pub bounds: Rc<RefCell<[Bounds<Pixels>; 64]>>,
     pub active_slider: Option<usize>,
@@ -62,6 +62,10 @@ impl Default for Editor {
 
 impl Workspace {
     pub fn open_image(&mut self, cx: &mut Context<Self>) {
+        if self.screen == Screen::Compose {
+            self.open_compose_file(cx);
+            return;
+        }
         if self.screen == Screen::Simulate {
             self.open_simulation_file(cx);
             return;
@@ -154,6 +158,10 @@ impl Workspace {
     }
 
     pub fn choice_changed(&mut self, id: &'static str, cx: &mut Context<Self>) {
+        if id == "compose-tool" {
+            self.compose_tool_changed(cx);
+            return;
+        }
         if matches!(id, "shirt-size" | "sleeve" | "shirt-side") {
             self.end_simulation_drag();
             self.simulation_changed(cx);
@@ -345,6 +353,9 @@ impl Workspace {
     }
 
     pub fn can_export_svg(&self) -> bool {
+        if self.screen == Screen::Compose {
+            return self.can_export_composition();
+        }
         self.editor.source.is_some()
             && !self.editor.loading
             && !self.editor.busy
@@ -353,6 +364,10 @@ impl Workspace {
     }
 
     pub fn save_svg(&mut self, cx: &mut Context<Self>) {
+        if self.screen == Screen::Compose {
+            self.save_composition(cx);
+            return;
+        }
         if !self.can_export_svg() {
             return;
         }

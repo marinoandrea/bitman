@@ -19,6 +19,9 @@ actions!(
         Copy,
         Paste,
         SelectAll,
+        ShowCompose,
+        Undo,
+        Redo,
         ShowConvert,
         ShowPrint,
         ShowSimulate,
@@ -58,6 +61,9 @@ pub fn init(cx: &mut App) {
         KeyBinding::new("cmd-c", Copy, None),
         KeyBinding::new("cmd-v", Paste, None),
         KeyBinding::new("cmd-a", SelectAll, None),
+        KeyBinding::new("cmd-4", ShowCompose, None),
+        KeyBinding::new("cmd-z", Undo, Some("Workspace")),
+        KeyBinding::new("cmd-shift-z", Redo, Some("Workspace")),
         KeyBinding::new("cmd-1", ShowConvert, None),
         KeyBinding::new("cmd-2", ShowPrint, None),
         KeyBinding::new("cmd-3", ShowSimulate, None),
@@ -98,8 +104,11 @@ pub fn init(cx: &mut App) {
         Menu {
             name: "Edit".into(),
             items: vec![
+                MenuItem::action("Undo", Undo),
+                MenuItem::action("Redo", Redo),
+                MenuItem::separator(),
                 // Native selectors also work in the Open/Export dialog text fields.
-                // No workspace handlers: these stay disabled without an editable selection.
+                // Compose fields supply handlers while editing.
                 MenuItem::os_action("Cut", Cut, OsAction::Cut),
                 MenuItem::os_action("Copy", Copy, OsAction::Copy),
                 MenuItem::os_action("Paste", Paste, OsAction::Paste),
@@ -113,6 +122,7 @@ pub fn init(cx: &mut App) {
             name: "View".into(),
             items: vec![
                 MenuItem::action("Convert", ShowConvert),
+                MenuItem::action("Compose", ShowCompose),
                 MenuItem::action("Print", ShowPrint),
                 MenuItem::action("Simulate", ShowSimulate),
                 MenuItem::separator(),

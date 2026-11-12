@@ -1,4 +1,4 @@
-use gpui::{Context, Div, Pixels, Styled, canvas, div, point, prelude::*, px, rgb};
+use gpui::{Context, Div, Pixels, Styled, div, prelude::*, px, rgb};
 
 use crate::{
     app::{Screen, Workspace},
@@ -6,125 +6,6 @@ use crate::{
 };
 
 impl Workspace {
-    pub fn compose_sidebar(&self, _cx: &mut Context<Self>) -> Div {
-        column()
-            .gap_0()
-            .child(section(
-                "Artboard",
-                column()
-                    .child(label("Page preset"))
-                    .child(
-                        row()
-                            .child(button("A5"))
-                            .child(button("A4"))
-                            .child(button("A3")),
-                    )
-                    .child(label("Orientation"))
-                    .child(row().child(button("Landscape")).child(button("Portrait")))
-                    .child(field("Width", "297 mm"))
-                    .child(field("Height", "210 mm")),
-            ))
-            .child(section(
-                "Layers",
-                column()
-                    .child(muted("Your page is empty"))
-                    .child(row().child(button("Group")).child(button("Ungroup"))),
-            ))
-            .child(section(
-                "Transform",
-                column()
-                    .child(muted("Select an object to edit its position"))
-                    .child(field("X / Y", "— / — mm"))
-                    .child(field("Width / height", "— / — mm"))
-                    .child(field("Rotation", "0°"))
-                    .child(row().child(button("Flip ↔")).child(button("Flip ↕")))
-                    .child(row().child(button("Centre ↔")).child(button("Centre ↕")))
-                    .child(row().child(button("To front")).child(button("To back"))),
-            ))
-            .child(section(
-                "Colour",
-                column()
-                    .child(field("Fill", "■  #000000"))
-                    .child(field("Stroke", "None"))
-                    .child(field("Weight", "0.5 mm"))
-                    .child(swatches())
-                    .child(check("Apply to whole page", false)),
-            ))
-            .when(self.compose_tool == 3, |side| {
-                side.child(section(
-                    "Text",
-                    column()
-                        .child(labeled_input("Text content", "Type something…"))
-                        .child(field("Font", "System font  ▾"))
-                        .child(field("Size", "48 pt"))
-                        .child(field("Letter spacing", "0"))
-                        .child(label("Alignment"))
-                        .child(
-                            row()
-                                .child(button("Left"))
-                                .child(button("Centre"))
-                                .child(button("Right")),
-                        ),
-                ))
-            })
-            .when(self.compose_tool == 1, |side| {
-                side.child(section(
-                    "Nodes",
-                    column()
-                        .child(row().child(button("Corner")).child(button("Smooth")))
-                        .child(
-                            row()
-                                .child(button("Break path"))
-                                .child(button("Delete node")),
-                        )
-                        .child(field("Simplify", "0.05 mm"))
-                        .child(button("Simplify selection")),
-                ))
-            })
-            .when(self.compose_tool == 4, |side| {
-                side.child(section(
-                    "Shape",
-                    column()
-                        .child(row().child(button("Rectangle")).child(button("Ellipse")))
-                        .child(row().child(button("Polygon")).child(button("Star")))
-                        .child(field("Sides", "5")),
-                ))
-            })
-            .when(self.compose_tool == 5, |side| {
-                side.child(section(
-                    "Fill tool",
-                    column()
-                        .child(field("Grow", "0.2 mm"))
-                        .child(field("Close gaps", "0.0 mm"))
-                        .child(muted("Click an enclosed area to fill it.")),
-                ))
-            })
-            .child(section(
-                "Combine shapes",
-                column()
-                    .child(
-                        row()
-                            .flex_wrap()
-                            .child(button("Unite"))
-                            .child(button("Subtract"))
-                            .child(button("Intersect")),
-                    )
-                    .child(
-                        row()
-                            .child(button("Exclude"))
-                            .child(button("Split"))
-                            .child(button("Combine")),
-                    )
-                    .child(row().child(button("Separate")).child(button("Join ends"))),
-            ))
-            .child(section(
-                "Output",
-                column()
-                    .child(primary_button("Send to Print"))
-                    .child(button("Save as SVG")),
-            ))
-    }
-
     pub fn help_sidebar(&self, cx: &mut Context<Self>) -> Div {
         column()
             .gap_0()
@@ -199,17 +80,7 @@ impl Workspace {
                     .child(empty_message("Drop an image to get started", "or open an image from your computer"))
                     .child(muted("PNG, JPG, GIF, WebP, BMP, TIFF"))
                     .child(button("Choose image…").id("choose-image").cursor_pointer().on_click(cx.listener(|this, _, _, cx|this.open_image(cx))))),
-            Screen::Compose => stage
-                .child(div().flex().flex_1().min_h_0().p(px(32.0)).items_center().justify_center()
-                    .child(column().gap(px(8.0)).size_full().max_w(px(740.0))
-                        .child(row().justify_between().child(muted("0"))
-                            .child(muted("50"))
-                            .child(muted("100"))
-                            .child(muted("150"))
-                            .child(muted("200"))
-                            .child(muted("250 mm")))
-                        .child(artboard())))
-                .child(self.library_shelf(cx)),
+            Screen::Compose => self.compose_stage(cx),
             Screen::Print => stage.items_center().justify_center().child(
                 column().items_center().gap(px(20.0))
                     .child(div().w(px(480.0)).h(px(340.0)).bg(rgb(WHITE)).border_1().border_color(rgb(LINE)).shadow_sm()
@@ -229,38 +100,14 @@ impl Workspace {
                         ("Open an image", "Choose File → Open Image… (⌘O), or drop an image into the window. PNG, JPEG, GIF, WebP, BMP, and TIFF are supported."),
                         ("Convert", "Prepare raster images for vector tracing. Adjust the look, threshold, colours, and detail. Compare the SVG with the original using the Original, Split, or Overlay view."),
                         ("Print", "Choose one ink, CMYK, or spot colours. Set levels, halftone or dither options, page dimensions, and registration marks. Review each plate before export."),
-                        ("Export", "Choose File → Export SVG… (⇧⌘S) from Convert or Print after processing finishes. Print exports layered SVG plates. Preview resolution is capped at 1024 pixels per side; export is capped at 4096."),
-                        ("Keyboard shortcuts", "⌘O Open image · ⇧⌘S Export SVG · ⌘1 Convert · ⌘2 Print · ⌘3 Simulate · ⌥⌘S Save mock-up · Delete/Backspace Remove selected artwork · ⌃⌘F Full screen · ⌘M Minimize · ⇧⌘/ Help · ⌘W Close window · ⌘Q Quit"),
+                        ("Export", "Choose File → Export SVG… (⇧⌘S) from Compose, or from Convert / Print after processing finishes. Print exports layered SVG plates. Convert / Print previews are capped at 1024 pixels per side; their exports are capped at 4096. Compose exports vector geometry without a raster cap."),
+                        ("Keyboard shortcuts", "⌘O Open image · ⇧⌘S Export SVG · ⌘1 Convert · ⌘2 Print · ⌘3 Simulate · ⌘4 Compose · ⌘Z / ⇧⌘Z Undo / redo in Compose · ⌥⌘S Save mock-up · Delete/Backspace Remove selected artwork · ⌃⌘F Full screen · ⌘M Minimize · ⇧⌘/ Help · ⌘W Close window · ⌘Q Quit"),
                         ("Simulate", "Add raster artwork from a file or use Add to Simulate in Convert / Print. Click a library thumbnail to place another copy. Drag designs or use placement sliders and step buttons; the lower blue handle resizes and the upper handle rotates. Front and back keep separate designs. Select a design and press Delete or Backspace, choose Edit → Remove Artwork, or use its Remove button; the library copy stays available. Fit and 100% control the preview. JPG export saves the current side without selection handles. Garment dimensions are illustrative, not manufacturer specifications."),
-                        ("Still in development", "Compose, Batch, and the Compose library are layout previews. Their editing and queue tools, along with Fit and 100% outside Simulate, are not implemented yet."),
+                        ("Compose", "Draw rectangles, ellipses, polygons or stars; click to build straight paths. Add text and edit fields with Enter to apply or Esc to cancel. Import images, or use Add to Compose in Convert / Print. Shift-click layers or objects to select several; group, duplicate, reorder and transform them. Drag blue handles to resize or rotate. Nodes edits polygon and path vertices. Save SVG embeds artwork; Send to Print rasterizes the current page at up to 4096 pixels. Undo / redo and Fit / 100% are supported. Boolean path operations and curve editing are not available."),
+                        ("Still in development", "Batch conversion and Fit / 100% in Convert and Print are layout previews."),
                     ].into_iter().map(|(title, detail)| help_section(title, help_text(detail)).w(help_width))),
             ),
         }
-    }
-
-    fn library_shelf(&self, cx: &mut Context<Self>) -> Div {
-        column()
-            .gap(px(12.0))
-            .flex_shrink_0()
-            .px(px(20.0))
-            .py(px(14.0))
-            .border_t_1()
-            .border_color(rgb(LINE))
-            .bg(rgb(PANEL))
-            .child(
-                row()
-                    .child(heading("LIBRARY").text_xs())
-                    .child(self.choices(
-                        "shelf-source",
-                        &["Convert", "Print"],
-                        self.library,
-                        cx,
-                        |s, i| s.library = i,
-                    ))
-                    .child(div().flex_1())
-                    .child(button("+ Add file")),
-            )
-            .child(muted("No saved graphics yet"))
     }
 
     fn batch_stage(&self) -> Div {
@@ -341,25 +188,4 @@ fn help_section(title: &'static str, content: impl IntoElement) -> Div {
                 .text_color(rgb(WHITE)),
         )
         .child(content)
-}
-
-fn artboard() -> Div {
-    div().flex_1().min_h_0().w_full().child(
-        canvas(
-            |_, _, _| (),
-            |bounds, (), window, _| {
-                let width = bounds.size.width.min(bounds.size.height * (297.0 / 210.0));
-                let height = width * (210.0 / 297.0);
-                let origin = bounds.origin
-                    + point(
-                        (bounds.size.width - width) / 2.0,
-                        (bounds.size.height - height) / 2.0,
-                    );
-                let page = gpui::Bounds::new(origin, gpui::size(width, height));
-                window.paint_quad(gpui::fill(page, rgb(WHITE)));
-                window.paint_quad(gpui::outline(page, rgb(LINE), Default::default()));
-            },
-        )
-        .size_full(),
-    )
 }

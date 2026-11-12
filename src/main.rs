@@ -1,4 +1,6 @@
 mod app;
+mod compose_input;
+mod compose_ui;
 mod controls;
 mod editor;
 mod effect_ui;
